@@ -1,3 +1,5 @@
+import { ErrorCode } from "../errors/error-codes";
+import { LedgerError } from "../errors/ledger-error";
 import type { Event } from "../events/event";
 
 export abstract class Entity {
@@ -9,7 +11,7 @@ export abstract class Entity {
 
   static _applyEvents<T extends Entity>(entity: T, events: Event<T>[]): void {
     if (events.length === 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.EMPTY_EVENTS_LIST);
     }
 
     for (const event of events) {

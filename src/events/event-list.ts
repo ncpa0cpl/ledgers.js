@@ -1,4 +1,6 @@
 import type { Entity } from "../entity/entity";
+import { ErrorCode } from "../errors/error-codes";
+import { LedgerError } from "../errors/ledger-error";
 import type { EventData } from "../types";
 import type { Event } from "./event";
 
@@ -38,7 +40,7 @@ export class EventList<E extends Entity> {
 
   serialize(): EventData<E>[] {
     if (this.isTransactionPending) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
     }
 
     return this.committed.map((e) => e.serialize());

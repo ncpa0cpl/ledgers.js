@@ -1,4 +1,6 @@
 import { Entity } from "../entity/entity";
+import { ErrorCode } from "../errors/error-codes";
+import { LedgerError } from "../errors/ledger-error";
 import { Event } from "../events/event";
 import { EventList } from "../events/event-list";
 import { Ledger } from "../ledger/ledger";
@@ -10,7 +12,7 @@ export class EntitySingleton<E extends Entity> {
     eventData: EventData<any>[]
   ): void {
     if (singleton.events.length > 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
     eventData.forEach((e) => singleton.events.add(new Event(e)));
@@ -34,7 +36,7 @@ export class EntitySingleton<E extends Entity> {
     this.entityName = new entityConstructor(ledger).name;
 
     if (!this.entityName) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.ENTITY_NAME_NOT_SPECIFIED);
     }
 
     Ledger._getEntityController(ledger).registerSingleton(this);
@@ -52,7 +54,7 @@ export class EntitySingleton<E extends Entity> {
 
   eventCreate(initData: EntityData<E>): string {
     if (this.events.length > 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED);
     }
 
     initData.id ??= this.parentLedger.generateNextID();
@@ -68,7 +70,7 @@ export class EntitySingleton<E extends Entity> {
 
   eventChange(changes: EntityChangeData<E>): void {
     if (this.events.length === 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
     const event = Event.generateChangeEvent<E>(this.parentLedger, changes);
@@ -92,7 +94,7 @@ export class EntitySingleton<E extends Entity> {
 
   get(): E {
     if (this.events.length === 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
     const entity = new this.entityConstructor(this.parentLedger);

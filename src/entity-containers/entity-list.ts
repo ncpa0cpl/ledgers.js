@@ -1,4 +1,6 @@
 import { Entity } from "../entity/entity";
+import { ErrorCode } from "../errors/error-codes";
+import { LedgerError } from "../errors/ledger-error";
 import { Event } from "../events/event";
 import { EventList } from "../events/event-list";
 import { Ledger } from "../ledger/ledger";
@@ -15,7 +17,7 @@ export class EntityList<E extends Entity> {
     eventData: SerializedEntityListEvents<any>
   ): void {
     if (list.entitiesEvents.size > 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
     for (const [id, events] of eventData) {
@@ -32,7 +34,7 @@ export class EntityList<E extends Entity> {
   ): SerializedEntityListEvents<E> {
     for (const [_, eventList] of list.entitiesEvents) {
       if (eventList.isTransactionPending) {
-        throw new Error();
+        throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
       }
     }
 
@@ -52,7 +54,7 @@ export class EntityList<E extends Entity> {
     this.entityName = new entityConstructor(ledger).name;
 
     if (!this.entityName) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.ENTITY_NAME_NOT_SPECIFIED);
     }
 
     Ledger._getEntityController(ledger).registerList(this);
@@ -84,7 +86,7 @@ export class EntityList<E extends Entity> {
 
   private createEntityFromEvents(events: EventList<E>): E {
     if (events.length === 0) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.EMPTY_EVENTS_LIST);
     }
 
     const entity = new this.entityConstructor(this.parentLedger);
@@ -98,7 +100,7 @@ export class EntityList<E extends Entity> {
     initData.id ??= this.parentLedger.generateNextID();
 
     if (this.entitiesEvents.has(initData.id)) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.DUPLICATE_IDENTIFIER);
     }
 
     const event = Event.generateCreateEvent(this.parentLedger, initData);
@@ -113,14 +115,10 @@ export class EntityList<E extends Entity> {
   }
 
   eventChange(id: string, changes: EntityChangeData<E>): void {
-    if (this.entitiesEvents.has(id)) {
-      throw new Error();
-    }
-
     const eventList = this.entitiesEvents.get(id);
 
     if (eventList === undefined) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
     }
 
     const event = Event.generateChangeEvent<E>(this.parentLedger, changes);
@@ -145,11 +143,11 @@ export class EntityList<E extends Entity> {
   }
 
   get(id: string): E {
-    if (!this.entitiesEvents.has(id)) {
-      throw new Error();
-    }
+    const eventList = this.entitiesEvents.get(id);
 
-    const eventList = this.entitiesEvents.get(id)!;
+    if (!eventList) {
+      throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
+    }
 
     return this.createEntityFromEvents(eventList);
   }

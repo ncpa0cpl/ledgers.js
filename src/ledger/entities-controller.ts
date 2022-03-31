@@ -2,6 +2,8 @@ import { CopyList } from "../entity-containers/copy-list";
 import { EntityList } from "../entity-containers/entity-list";
 import { EntitySingleton } from "../entity-containers/entity-singleton";
 import type { Entity } from "../entity/entity";
+import { ErrorCode } from "../errors/error-codes";
+import { LedgerError } from "../errors/ledger-error";
 import type {
   Copy,
   EventData,
@@ -16,7 +18,7 @@ export class EntitiesController {
 
   private loadIntoSingleton(name: string, data: EventData<any>[]): void {
     if (!this.singletons.has(name)) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
     const singleton = this.singletons.get(name)!;
@@ -28,7 +30,7 @@ export class EntitiesController {
     data: SerializedEntityListEvents<any>
   ): void {
     if (!this.lists.has(name)) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
     const list = this.lists.get(name)!;
@@ -37,7 +39,7 @@ export class EntitiesController {
 
   private loadIntoCopyList(name: string, data: Copy[]) {
     if (!this.copies.has(name)) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
     const copies = this.copies.get(name)!;
@@ -46,7 +48,7 @@ export class EntitiesController {
 
   registerSingleton(s: EntitySingleton<any>): void {
     if (this.singletons.has(s.getName())) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.DUPLICATE_ENTITY);
     }
 
     this.singletons.set(s.getName(), s);
@@ -54,13 +56,17 @@ export class EntitiesController {
 
   registerList(s: EntityList<any>): void {
     if (this.lists.has(s.getName())) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.DUPLICATE_ENTITY);
     }
 
     this.lists.set(s.getName(), s);
   }
 
   registerCopyList(l: CopyList<Copy>, name: string): void {
+    if (this.copies.has(name)) {
+      throw new LedgerError(ErrorCode.DUPLICATE_ENTITY);
+    }
+
     this.copies.set(name, l);
   }
 
@@ -68,7 +74,7 @@ export class EntitiesController {
     const s = this.singletons.get(name);
 
     if (!s) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
     return s as EntitySingleton<E>;
@@ -78,7 +84,7 @@ export class EntitiesController {
     const l = this.lists.get(name);
 
     if (!l) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
     return l as EntityList<E>;
@@ -88,7 +94,7 @@ export class EntitiesController {
     const c = this.copies.get(name);
 
     if (!c) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
     return c as CopyList<C>;
@@ -137,7 +143,7 @@ export class EntitiesController {
       }
     }
 
-    throw new Error();
+    throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
   }
 
   getSnapshot(): object {

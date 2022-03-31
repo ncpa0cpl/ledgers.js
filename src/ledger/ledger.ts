@@ -1,5 +1,7 @@
 import * as uuid from "uuid";
 import type { Entity } from "../entity/entity";
+import { ErrorCode } from "../errors/error-codes";
+import { LedgerError } from "../errors/ledger-error";
 import type { Copy, Reference, SerializedLedger } from "../types";
 import { EntityReferenceType } from "../types";
 import { EntitiesController } from "./entities-controller";
@@ -16,7 +18,7 @@ export abstract class Ledger {
     const ledger = new this(...args);
 
     if (data.name !== ledger.name) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.LEDGER_NAMES_DO_NOT_MATCH);
     }
 
     ledger.entities.loadFrom(data);
@@ -58,7 +60,7 @@ export abstract class Ledger {
         const isCopy = !!this.entities.findCopy(entity.id);
 
         if (!isCopy) {
-          throw new Error();
+          throw new LedgerError(ErrorCode.ENTITY_NOT_FOUND);
         }
       }
     }
@@ -81,7 +83,7 @@ export abstract class Ledger {
 
   resolveReference<T extends Entity | Copy>(ref: Reference<T>): T {
     if (ref.ledgerName !== this.name) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.LEDGER_NAMES_DO_NOT_MATCH);
     }
 
     switch (ref.type) {
@@ -89,7 +91,7 @@ export abstract class Ledger {
         const singleton = this.entities.getSingletonByName(ref.name);
 
         if (singleton.getID() !== ref.id) {
-          throw new Error();
+          throw new LedgerError(ErrorCode.ENTITY_NOT_FOUND);
         }
 
         return singleton.get() as T;
@@ -105,7 +107,7 @@ export abstract class Ledger {
         const copy = copyList.get(ref.id);
 
         if (!copy) {
-          throw new Error();
+          throw new LedgerError(ErrorCode.ENTITY_NOT_FOUND);
         }
 
         return copy as T;
@@ -117,7 +119,7 @@ export abstract class Ledger {
 
   startTransaction(): void {
     if (this.transaction) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.TRANSACTION_ALREADY_IN_PROGRESS);
     }
 
     this.transaction = new Transaction();
@@ -149,7 +151,7 @@ export abstract class Ledger {
 
   serialize(): SerializedLedger {
     if (this.transaction) {
-      throw new Error();
+      throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
     }
 
     return {
