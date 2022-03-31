@@ -6,36 +6,36 @@ import type { Event } from "./event";
 
 export class EventList<E extends Entity> {
   private committed: Event<E>[] = [];
-  private stagged: Event<E>[] = [];
+  private staged: Event<E>[] = [];
 
   get isTransactionPending(): boolean {
-    return this.stagged.length > 0;
+    return this.staged.length > 0;
   }
 
   get length(): number {
-    return this.stagged.length + this.committed.length;
+    return this.staged.length + this.committed.length;
   }
 
   commit(): EventList<E> {
-    this.committed.push(...this.stagged.splice(0));
+    this.committed.push(...this.staged.splice(0));
 
     return this;
   }
 
   rollback(): EventList<E> {
-    this.stagged.splice(0);
+    this.staged.splice(0);
 
     return this;
   }
 
   add(event: Event<E>): EventList<E> {
-    this.stagged.push(event);
+    this.staged.push(event);
 
     return this;
   }
 
   getAsArray(): Event<E>[] {
-    return [...this.committed, ...this.stagged];
+    return [...this.committed, ...this.staged];
   }
 
   serialize(): EventData<E>[] {

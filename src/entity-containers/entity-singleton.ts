@@ -84,9 +84,13 @@ export class EntitySingleton<E extends Entity> {
     return this.entityName;
   }
 
+  isInitiated(): boolean {
+    return this.events.length !== 0;
+  }
+
   getID(): string {
     if (this.events.length === 0) {
-      return "";
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
     return this.events.getAsArray()[0]!.data.id ?? "";

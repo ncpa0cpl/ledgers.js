@@ -90,7 +90,7 @@ export abstract class Ledger {
       case EntityReferenceType.SINGLETON: {
         const singleton = this.entities.getSingletonByName(ref.name);
 
-        if (singleton.getID() !== ref.id) {
+        if (!singleton.isInitiated() || singleton.getID() !== ref.id) {
           throw new LedgerError(ErrorCode.ENTITY_NOT_FOUND);
         }
 

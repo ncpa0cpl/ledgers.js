@@ -104,7 +104,7 @@ export class EntitiesController {
     if (!id) return undefined;
 
     for (const s of this.singletons.values()) {
-      if (s.getID() === id) {
+      if (s.isInitiated() && s.getID() === id) {
         return s.get() as E;
       }
     }

@@ -26,7 +26,7 @@ export class CopyList<C extends Copy> {
   private parentLedger: Ledger;
   private name: string;
   private committed = new Map<string, C>();
-  private stagged = new Map<string, C>();
+  private staged = new Map<string, C>();
   private txInterface: TransactionInterface;
 
   constructor(parentLedger: Ledger, name: string) {
@@ -44,7 +44,7 @@ export class CopyList<C extends Copy> {
   private mergeMaps() {
     const tmpCopies = new Map(this.committed);
 
-    for (const [name, copy] of this.stagged) {
+    for (const [name, copy] of this.staged) {
       tmpCopies.set(name, copy);
     }
 
@@ -52,16 +52,16 @@ export class CopyList<C extends Copy> {
   }
 
   private get isTransactionPending(): boolean {
-    return this.stagged.size > 0;
+    return this.staged.size > 0;
   }
 
   private commit() {
     this.committed = this.mergeMaps();
-    this.stagged = new Map();
+    this.staged = new Map();
   }
 
   private rollback() {
-    this.stagged.clear();
+    this.staged.clear();
   }
 
   private addToTransaction(): void {
@@ -75,16 +75,16 @@ export class CopyList<C extends Copy> {
   }
 
   has(id: string): boolean {
-    return this.committed.has(id) || this.stagged.has(id);
+    return this.committed.has(id) || this.staged.has(id);
   }
 
   put(copy: C): void {
-    this.stagged.set(copy.id, copy);
+    this.staged.set(copy.id, copy);
     this.addToTransaction();
   }
 
   get(id: string): C | undefined {
-    return this.stagged.get(id) ?? this.committed.get(id);
+    return this.staged.get(id) ?? this.committed.get(id);
   }
 
   getAll(): C[] {
