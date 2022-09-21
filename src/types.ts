@@ -13,6 +13,7 @@ export type EntityChangeData<T extends object> = DeepPartial<
 export enum EventType {
   CREATE = "CREATE",
   CHANGE = "CHANGE",
+  BREAKPOINT = "BREAKPOINT",
 }
 
 export class Copy {
@@ -24,6 +25,7 @@ export type EventData<T extends object> = {
   timestamp: number;
   type: EventType;
   data: EntityChangeData<T> | EntityData<T>;
+  breakpoint?: string | number;
 };
 
 export type SerializedEntityListEvents<T extends object> = [
@@ -31,15 +33,20 @@ export type SerializedEntityListEvents<T extends object> = [
   EventData<T>[]
 ][];
 
+export type SerializedBreakpoints = {
+  ledgerBreakpoints: Array<string | number>;
+};
+
 export type SerializedEntities = {
   singletonEntities: Record<string, EventData<any>[]>;
   listEntities: Record<string, SerializedEntityListEvents<any>>;
   copies: Record<string, Copy[]>;
 };
 
-export type SerializedLedger = SerializedEntities & {
-  name: string;
-};
+export type SerializedLedger = SerializedEntities &
+  SerializedBreakpoints & {
+    name: string;
+  };
 
 export enum EntityReferenceType {
   SINGLETON = "SINGLETON",

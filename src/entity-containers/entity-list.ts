@@ -21,7 +21,7 @@ export class EntityList<E extends Entity> {
     }
 
     for (const [id, events] of eventData) {
-      const eventList = new EventList<E2>();
+      const eventList = new EventList<E2>(list.parentLedger);
       events.forEach((e) => eventList.add(new Event(e)));
       eventList.commit();
 
@@ -32,7 +32,7 @@ export class EntityList<E extends Entity> {
   static _serialize<E extends Entity>(
     list: EntityList<E>
   ): SerializedEntityListEvents<E> {
-    for (const [_, eventList] of list.entitiesEvents) {
+    for (const [, eventList] of list.entitiesEvents) {
       if (eventList.isTransactionPending) {
         throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
       }
@@ -84,14 +84,17 @@ export class EntityList<E extends Entity> {
     }
   }
 
-  private createEntityFromEvents(events: EventList<E>): E {
+  private createEntityFromEvents(
+    events: EventList<E>,
+    breakpoint?: string | number
+  ): E {
     if (events.length === 0) {
       throw new LedgerError(ErrorCode.EMPTY_EVENTS_LIST);
     }
 
     const entity = new this.entityConstructor(this.parentLedger);
 
-    Entity._applyEvents(entity, events.getAsArray());
+    Entity._applyEvents(entity, events.getAsArray(breakpoint));
 
     return entity;
   }
@@ -103,9 +106,21 @@ export class EntityList<E extends Entity> {
       throw new LedgerError(ErrorCode.DUPLICATE_IDENTIFIER);
     }
 
+    const previousBreakpoints = Ledger._getBreakpointController(
+      this.parentLedger
+    ).getBreakpoints();
+
+    const eventList = new EventList<E>(this.parentLedger);
+
+    for (const breakpoint of previousBreakpoints) {
+      eventList.add(
+        Event.generateBreakpointEvent<E>(this.parentLedger, breakpoint)
+      );
+    }
+
     const event = Event.generateCreateEvent(this.parentLedger, initData);
 
-    const eventList = new EventList<E>().add(event);
+    eventList.add(event);
 
     this.entitiesEvents.set(initData.id, eventList);
 
@@ -128,28 +143,53 @@ export class EntityList<E extends Entity> {
     this.addToTransaction(eventList);
   }
 
+  eventBreakpoint(breakpoint: string | number): void {
+    for (const eventList of this.entitiesEvents.values()) {
+      const event = Event.generateBreakpointEvent<E>(
+        this.parentLedger,
+        breakpoint
+      );
+
+      eventList.add(event);
+      this.addToTransaction(eventList);
+    }
+  }
+
   getName(): string {
     return this.entityName;
   }
 
-  getAll(): E[] {
+  getAll(breakpoint?: string | number): E[] {
     const entities: E[] = [];
 
     for (const events of this.entitiesEvents.values()) {
-      entities.push(this.createEntityFromEvents(events));
+      if (
+        breakpoint !== undefined &&
+        !events.hasCreateEventBeforeBreakpoint(breakpoint)
+      )
+        continue;
+
+      entities.push(this.createEntityFromEvents(events, breakpoint));
     }
 
     return entities;
   }
 
-  get(id: string): E {
+  get(id: string, breakpoint?: string | number): E {
     const eventList = this.entitiesEvents.get(id);
 
     if (!eventList) {
       throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
     }
 
-    return this.createEntityFromEvents(eventList);
+    if (
+      breakpoint !== undefined &&
+      !eventList.hasCreateEventBeforeBreakpoint(breakpoint)
+    ) {
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+    }
+
+    return this.createEntityFromEvents(eventList, breakpoint);
   }
 
   has(id: string): boolean {

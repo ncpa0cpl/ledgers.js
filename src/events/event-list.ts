@@ -1,12 +1,16 @@
 import type { Entity } from "../entity/entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
+import { Ledger } from "../ledger/ledger";
 import type { EventData } from "../types";
+import { EventType } from "../types";
 import type { Event } from "./event";
 
 export class EventList<E extends Entity> {
   private committed: Event<E>[] = [];
   private staged: Event<E>[] = [];
+
+  constructor(private ledger: Ledger) {}
 
   get isTransactionPending(): boolean {
     return this.staged.length > 0;
@@ -34,8 +38,21 @@ export class EventList<E extends Entity> {
     return this;
   }
 
-  getAsArray(): Event<E>[] {
-    return [...this.committed, ...this.staged];
+  hasCreateEventBeforeBreakpoint(breakpoint: string | number): boolean {
+    const events = this.getAsArray(breakpoint);
+    return events.some((e) => e.type === EventType.CREATE);
+  }
+
+  getAsArray(breakpoint?: string | number): Event<E>[] {
+    const events = [...this.committed, ...this.staged];
+
+    if (breakpoint !== undefined) {
+      return Ledger._getBreakpointController(
+        this.ledger
+      ).getEventsUntilBreakpoint(breakpoint, events);
+    }
+
+    return events;
   }
 
   serialize(): EventData<E>[] {

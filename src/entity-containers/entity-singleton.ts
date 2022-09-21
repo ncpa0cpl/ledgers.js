@@ -28,12 +28,13 @@ export class EntitySingleton<E extends Entity> {
   private readonly parentLedger: Ledger;
   private readonly entityName: string;
   private readonly entityConstructor: new (parent: Ledger) => E;
-  private events = new EventList<E>();
+  private events: EventList<E>;
 
   constructor(ledger: Ledger, entityConstructor: new (parent: Ledger) => E) {
     this.parentLedger = ledger;
     this.entityConstructor = entityConstructor;
     this.entityName = new entityConstructor(ledger).name;
+    this.events = new EventList<E>(this.parentLedger);
 
     if (!this.entityName) {
       throw new LedgerError(ErrorCode.ENTITY_NAME_NOT_SPECIFIED);
@@ -80,6 +81,21 @@ export class EntitySingleton<E extends Entity> {
     this.addToTransaction();
   }
 
+  eventBreakpoint(breakpoint: string | number): void {
+    if (this.events.length === 0) {
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+    }
+
+    const event = Event.generateBreakpointEvent<E>(
+      this.parentLedger,
+      breakpoint
+    );
+
+    this.events.add(event);
+
+    this.addToTransaction();
+  }
+
   getName(): string {
     return this.entityName;
   }
@@ -89,21 +105,31 @@ export class EntitySingleton<E extends Entity> {
   }
 
   getID(): string {
+    const eventList = this.events.getAsArray();
+    const firstEvent = eventList[0];
+
+    if (firstEvent === undefined) {
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+    }
+
+    return firstEvent.data.id!;
+  }
+
+  get(breakpoint?: string | number): E {
     if (this.events.length === 0) {
       throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
-    return this.events.getAsArray()[0]!.data.id ?? "";
-  }
-
-  get(): E {
-    if (this.events.length === 0) {
+    if (
+      breakpoint !== undefined &&
+      !this.events.hasCreateEventBeforeBreakpoint(breakpoint)
+    ) {
       throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
     const entity = new this.entityConstructor(this.parentLedger);
 
-    Entity._applyEvents(entity, this.events.getAsArray());
+    Entity._applyEvents(entity, this.events.getAsArray(breakpoint));
 
     return entity;
   }

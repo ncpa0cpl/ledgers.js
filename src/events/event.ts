@@ -6,14 +6,14 @@ import { EventType } from "../types";
 import { PropertyChangeInstruction } from "./property-change-instruction";
 
 export function getObjectPaths(obj: object) {
-  const paths = new Set<string>();
+  const paths = new Set<string[]>();
 
   const traverse = (o: object, parentPath: string[]) => {
     for (const [key, value] of Object.entries(o)) {
       const vPath = [...parentPath, key];
 
       if (["string", "number", "bigint", "boolean"].includes(typeof value)) {
-        paths.add(vPath.join("."));
+        paths.add(vPath);
       } else if (typeof value === "object" && value !== null) {
         traverse(value, vPath);
       }
@@ -58,19 +58,36 @@ export class Event<T extends object> {
     });
   }
 
+  static generateBreakpointEvent<U extends object>(
+    ledger: Ledger,
+    breakpoint: string | number
+  ): Event<U> {
+    return new Event<U>({
+      id: ledger.generateNextID(),
+      timestamp: ledger.generateTimestamp(),
+      type: EventType.BREAKPOINT,
+      data: {} as any,
+      breakpoint,
+    });
+  }
+
   id!: string;
   timestamp!: number;
   type!: EventType;
   data!: Partial<EntityData<T>> | EntityData<T>;
+  breakpoint?: string | number;
 
   constructor(e: EventData<T>) {
     this.id = e.id;
     this.timestamp = e.timestamp;
     this.type = e.type;
     this.data = omit(e.data, "name") as Partial<EntityData<T>>;
+    this.breakpoint = e.breakpoint;
   }
 
   apply(to: object): void {
+    if (this.type === EventType.BREAKPOINT) return;
+
     const bodyPaths = getObjectPaths(this.data);
 
     for (const path of bodyPaths) {

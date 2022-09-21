@@ -4,6 +4,7 @@ import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type { Copy, Reference, SerializedLedger } from "../types";
 import { EntityReferenceType } from "../types";
+import { BreakpointController } from "./breakpoint-controller";
 import { EntitiesController } from "./entities-controller";
 import { Transaction } from "./transaction";
 
@@ -22,6 +23,7 @@ export abstract class Ledger {
     }
 
     ledger.entities.loadFrom(data);
+    ledger.breakpoints.loadFrom(data);
 
     return ledger as InstanceType<T>;
   }
@@ -34,7 +36,12 @@ export abstract class Ledger {
     return l.entities;
   }
 
+  static _getBreakpointController(l: Ledger): BreakpointController {
+    return l.breakpoints;
+  }
+
   private entities = new EntitiesController();
+  private breakpoints = new BreakpointController(this);
   private transaction?: Transaction;
 
   abstract name: string;
@@ -137,7 +144,7 @@ export abstract class Ledger {
     this.transaction = undefined;
   }
 
-  tx(callback: () => void) {
+  tx(callback: () => void): void {
     this.startTransaction();
 
     try {
@@ -149,6 +156,18 @@ export abstract class Ledger {
     }
   }
 
+  addBreakpoint(breakpoint: string | number): void {
+    this.breakpoints.addBreakpoint(breakpoint);
+  }
+
+  hasBreakpoint(breakpoint: string | number): boolean {
+    return this.breakpoints.hasBreakpoint(breakpoint);
+  }
+
+  getExistingBreakpoints(): Array<string | number> {
+    return this.breakpoints.getBreakpoints();
+  }
+
   serialize(): SerializedLedger {
     if (this.transaction) {
       throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
@@ -157,10 +176,11 @@ export abstract class Ledger {
     return {
       name: this.name,
       ...this.entities.serialize(),
+      ...this.breakpoints.serialize(),
     };
   }
 
-  snapshot(): object {
-    return this.entities.getSnapshot();
+  snapshot(breakpoint?: string | number): object {
+    return { ...this.entities.getSnapshot(breakpoint) };
   }
 }

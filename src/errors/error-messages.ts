@@ -8,6 +8,10 @@ const createErrorMessageMap = <
 ) => v;
 
 export const ErrorMessage = createErrorMessageMap({
+  [ErrorCode.BREAKPOINT_ALREADY_EXISTS]:
+    "Cannot add a breakpoint that already exists.",
+  [ErrorCode.BREAKPOINT_DOES_NOT_EXIST]:
+    "Specified breakpoint was never added to the ledger.",
   [ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER]:
     "The ledger cannot be deserialized to a ledger that already contains initiated entities.",
   [ErrorCode.DUPLICATE_ENTITY]:

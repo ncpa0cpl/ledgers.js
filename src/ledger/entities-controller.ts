@@ -12,6 +12,14 @@ import type {
 } from "../types";
 
 export class EntitiesController {
+  static _getAllEntities(controller: EntitiesController) {
+    return [...controller.singletons.values()];
+  }
+
+  static _getAllEntityLists(controller: EntitiesController) {
+    return [...controller.lists.values()];
+  }
+
   private singletons = new Map<string, EntitySingleton<Entity>>();
   private lists = new Map<string, EntityList<Entity>>();
   private copies = new Map<string, CopyList<Copy>>();
@@ -146,7 +154,7 @@ export class EntitiesController {
     throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
   }
 
-  getSnapshot(): object {
+  getSnapshot(breakpoint?: string | number): object {
     const snapshot = {
       singletonEntities: {},
       listEntities: {},
@@ -155,12 +163,14 @@ export class EntitiesController {
 
     for (const [name, singleton] of this.singletons) {
       Object.assign(snapshot.singletonEntities, {
-        [name]: singleton.get(),
+        [name]: singleton.get(breakpoint),
       });
     }
 
     for (const [name, singleton] of this.lists) {
-      Object.assign(snapshot.listEntities, { [name]: singleton.getAll() });
+      Object.assign(snapshot.listEntities, {
+        [name]: singleton.getAll(breakpoint),
+      });
     }
 
     for (const [name, copies] of this.copies) {
