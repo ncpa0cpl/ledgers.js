@@ -1,9 +1,8 @@
-/** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
+/** @type {import("ts-jest/dist/types").InitialOptionsTsJest} */
 module.exports = {
-  preset: "ts-jest",
-  testRegex: ".*__tests__/.+(\.test\.(ts|js|tsx|jsx))$",
+  testRegex: ".*__tests__/.+(.test.(ts|js|tsx|jsx))$",
   transform: {
-    "^.+\.(ts|tsx)$": "ts-jest",
+    "^.+.(ts|tsx)$": "@swc/jest",
   },
   testEnvironment: "jsdom",
   roots: ["<rootDir>"],
