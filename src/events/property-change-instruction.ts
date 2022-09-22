@@ -1,7 +1,8 @@
 import { get, set, unset } from "lodash";
-import { SerializedChangeInstruction } from "../types";
+import type { SerializedChangeInstruction } from "../types";
 
 export class PropertyChangeInstruction {
+  /** @internal */
   static _loadFrom(
     serialized: SerializedChangeInstruction
   ): PropertyChangeInstruction {

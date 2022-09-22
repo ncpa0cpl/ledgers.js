@@ -12,6 +12,7 @@ import type {
 } from "../types";
 
 export class EntityList<E extends Entity> {
+  /** @internal */
   static _loadFrom<E2 extends Entity>(
     list: EntityList<E2>,
     eventData: SerializedEntityListEvents<any>
@@ -29,6 +30,7 @@ export class EntityList<E extends Entity> {
     }
   }
 
+  /** @internal */
   static _serialize<E extends Entity>(
     list: EntityList<E>
   ): SerializedEntityListEvents<E> {
@@ -41,6 +43,14 @@ export class EntityList<E extends Entity> {
     return [...list.entitiesEvents.entries()].map(
       ([id, events]): [string, SerializedEvent[]] => [id, events.serialize()]
     );
+  }
+
+  /** @internal */
+  static _addBreakpointEvent<E extends Entity>(
+    list: EntityList<E>,
+    breakpoint: string | number
+  ): void {
+    return list.eventBreakpoint(breakpoint);
   }
 
   private readonly parentLedger: Ledger;
@@ -99,6 +109,18 @@ export class EntityList<E extends Entity> {
     return entity;
   }
 
+  private eventBreakpoint(breakpoint: string | number): void {
+    for (const eventList of this.entitiesEvents.values()) {
+      const event = Event._generateBreakpointEvent<E>(
+        this.parentLedger,
+        breakpoint
+      );
+
+      eventList.add(event);
+      this.addToTransaction(eventList);
+    }
+  }
+
   eventCreate(initData: EntityData<E>): string {
     initData.id ??= this.parentLedger.generateNextID();
 
@@ -114,11 +136,11 @@ export class EntityList<E extends Entity> {
 
     for (const breakpoint of previousBreakpoints) {
       eventList.add(
-        Event.generateBreakpointEvent<E>(this.parentLedger, breakpoint)
+        Event._generateBreakpointEvent<E>(this.parentLedger, breakpoint)
       );
     }
 
-    const event = Event.generateCreateEvent(this.parentLedger, initData);
+    const event = Event._generateCreateEvent(this.parentLedger, initData);
 
     eventList.add(event);
 
@@ -136,23 +158,11 @@ export class EntityList<E extends Entity> {
       throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
     }
 
-    const event = Event.generateChangeEvent<E>(this.parentLedger, changes);
+    const event = Event._generateChangeEvent<E>(this.parentLedger, changes);
 
     eventList.add(event);
 
     this.addToTransaction(eventList);
-  }
-
-  eventBreakpoint(breakpoint: string | number): void {
-    for (const eventList of this.entitiesEvents.values()) {
-      const event = Event.generateBreakpointEvent<E>(
-        this.parentLedger,
-        breakpoint
-      );
-
-      eventList.add(event);
-      this.addToTransaction(eventList);
-    }
   }
 
   getName(): string {

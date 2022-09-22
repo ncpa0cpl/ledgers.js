@@ -9,6 +9,7 @@ export abstract class Entity {
   createdAt!: number;
   updatedAt!: number;
 
+  /** @internal */
   static _applyEvents<T extends Entity>(entity: T, events: Event<T>[]): void {
     if (events.length === 0) {
       throw new LedgerError(ErrorCode.EMPTY_EVENTS_LIST);

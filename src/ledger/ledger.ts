@@ -28,14 +28,17 @@ export abstract class Ledger {
     return ledger as InstanceType<T>;
   }
 
+  /** @internal */
   static _getTransaction(l: Ledger) {
     return l.transaction;
   }
 
+  /** @internal */
   static _getEntityController(l: Ledger): EntitiesController {
     return l.entities;
   }
 
+  /** @internal */
   static _getBreakpointController(l: Ledger): BreakpointController {
     return l.breakpoints;
   }

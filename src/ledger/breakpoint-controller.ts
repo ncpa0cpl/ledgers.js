@@ -1,3 +1,5 @@
+import { EntityList } from "../entity-containers/entity-list";
+import { EntitySingleton } from "../entity-containers/entity-singleton";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type { Event } from "../events/event";
@@ -33,11 +35,11 @@ export class BreakpointController {
     const entityLists = EntitiesController._getAllEntityLists(controller);
 
     for (const singleton of singletons) {
-      singleton.eventBreakpoint(breakpoint);
+      EntitySingleton._addBreakpointEvent(singleton, breakpoint);
     }
 
     for (const list of entityLists) {
-      list.eventBreakpoint(breakpoint);
+      EntityList._addBreakpointEvent(list, breakpoint);
     }
   }
 

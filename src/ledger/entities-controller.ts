@@ -12,10 +12,12 @@ import type {
 } from "../types";
 
 export class EntitiesController {
+  /** @internal */
   static _getAllEntities(controller: EntitiesController) {
     return [...controller.singletons.values()];
   }
 
+  /** @internal */
   static _getAllEntityLists(controller: EntitiesController) {
     return [...controller.lists.values()];
   }

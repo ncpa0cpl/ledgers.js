@@ -31,6 +31,7 @@ export function getObjectPaths(obj: object) {
 }
 
 export class Event<T extends object> {
+  /** @internal */
   static _loadFrom<U extends object>(serialized: SerializedEvent): Event<U> {
     const event = new Event<U>({
       id: serialized.id,
@@ -46,7 +47,8 @@ export class Event<T extends object> {
     return event;
   }
 
-  static generateCreateEvent<U extends object>(
+  /** @internal */
+  static _generateCreateEvent<U extends object>(
     ledger: Ledger,
     initData: EntityData<U>
   ): Event<U> {
@@ -60,7 +62,8 @@ export class Event<T extends object> {
     });
   }
 
-  static generateChangeEvent<U extends object>(
+  /** @internal */
+  static _generateChangeEvent<U extends object>(
     ledger: Ledger,
     changes: EntityChangeData<U>
   ): Event<U> {
@@ -78,7 +81,8 @@ export class Event<T extends object> {
     });
   }
 
-  static generateBreakpointEvent<U extends object>(
+  /** @internal */
+  static _generateBreakpointEvent<U extends object>(
     ledger: Ledger,
     breakpoint: string | number
   ): Event<U> {
@@ -97,7 +101,7 @@ export class Event<T extends object> {
   breakpoint?: string | number;
   instructions: PropertyChangeInstruction[] = [];
 
-  constructor(e: EventData<T>) {
+  private constructor(e: EventData<T>) {
     this.id = e.id;
     this.timestamp = e.timestamp;
     this.type = e.type;

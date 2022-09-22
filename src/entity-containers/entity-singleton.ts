@@ -8,6 +8,7 @@ import type { EntityChangeData, EntityData, SerializedEvent } from "../types";
 import { extractEntityIdFromEvent } from "../utilities/extract-entity-id-from-event";
 
 export class EntitySingleton<E extends Entity> {
+  /** @internal */
   static _loadFrom<E2 extends Entity>(
     singleton: EntitySingleton<E2>,
     eventData: SerializedEvent[]
@@ -20,10 +21,19 @@ export class EntitySingleton<E extends Entity> {
     singleton.events.commit();
   }
 
+  /** @internal */
   static _serialize<E extends Entity>(
     singleton: EntitySingleton<E>
   ): SerializedEvent[] {
     return singleton.events.serialize();
+  }
+
+  /** @internal */
+  static _addBreakpointEvent<E extends Entity>(
+    entity: EntitySingleton<E>,
+    breakpoint: string | number
+  ): void {
+    return entity.eventBreakpoint(breakpoint);
   }
 
   private readonly parentLedger: Ledger;
@@ -54,6 +64,21 @@ export class EntitySingleton<E extends Entity> {
     }
   }
 
+  private eventBreakpoint(breakpoint: string | number): void {
+    if (this.events.length === 0) {
+      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+    }
+
+    const event = Event._generateBreakpointEvent<E>(
+      this.parentLedger,
+      breakpoint
+    );
+
+    this.events.add(event);
+
+    this.addToTransaction();
+  }
+
   eventCreate(initData: EntityData<E>): string {
     if (this.events.length > 0) {
       throw new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED);
@@ -61,7 +86,7 @@ export class EntitySingleton<E extends Entity> {
 
     initData.id ??= this.parentLedger.generateNextID();
 
-    const event = Event.generateCreateEvent(this.parentLedger, initData);
+    const event = Event._generateCreateEvent(this.parentLedger, initData);
 
     this.events.add(event);
 
@@ -75,22 +100,7 @@ export class EntitySingleton<E extends Entity> {
       throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
-    const event = Event.generateChangeEvent<E>(this.parentLedger, changes);
-
-    this.events.add(event);
-
-    this.addToTransaction();
-  }
-
-  eventBreakpoint(breakpoint: string | number): void {
-    if (this.events.length === 0) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
-
-    const event = Event.generateBreakpointEvent<E>(
-      this.parentLedger,
-      breakpoint
-    );
+    const event = Event._generateChangeEvent<E>(this.parentLedger, changes);
 
     this.events.add(event);
 
