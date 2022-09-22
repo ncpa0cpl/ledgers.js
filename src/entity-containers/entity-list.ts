@@ -7,8 +7,8 @@ import { Ledger } from "../ledger/ledger";
 import type {
   EntityChangeData,
   EntityData,
-  EventData,
   SerializedEntityListEvents,
+  SerializedEvent,
 } from "../types";
 
 export class EntityList<E extends Entity> {
@@ -22,7 +22,7 @@ export class EntityList<E extends Entity> {
 
     for (const [id, events] of eventData) {
       const eventList = new EventList<E2>(list.parentLedger);
-      events.forEach((e) => eventList.add(new Event(e)));
+      events.forEach((e) => eventList.add(Event._loadFrom(e)));
       eventList.commit();
 
       list.entitiesEvents.set(id, eventList);
@@ -39,7 +39,7 @@ export class EntityList<E extends Entity> {
     }
 
     return [...list.entitiesEvents.entries()].map(
-      ([id, events]): [string, EventData<E>[]] => [id, events.serialize()]
+      ([id, events]): [string, SerializedEvent[]] => [id, events.serialize()]
     );
   }
 

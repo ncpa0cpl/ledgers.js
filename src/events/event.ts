@@ -1,7 +1,12 @@
-import { cloneDeep, omit } from "lodash";
+import { omit } from "lodash";
 import type { Ledger } from "../ledger/ledger";
 import type { DeepPartial } from "../type-utils";
-import type { EntityChangeData, EntityData, EventData } from "../types";
+import type {
+  EntityChangeData,
+  EntityData,
+  EventData,
+  SerializedEvent,
+} from "../types";
 import { EventType } from "../types";
 import { PropertyChangeInstruction } from "./property-change-instruction";
 
@@ -26,6 +31,21 @@ export function getObjectPaths(obj: object) {
 }
 
 export class Event<T extends object> {
+  static _loadFrom<U extends object>(serialized: SerializedEvent): Event<U> {
+    const event = new Event<U>({
+      id: serialized.id,
+      timestamp: serialized.timestamp,
+      type: serialized.type,
+      breakpoint: serialized.breakpoint,
+    });
+
+    event.instructions = serialized.instructions.map((i) =>
+      PropertyChangeInstruction._loadFrom(i)
+    );
+
+    return event;
+  }
+
   static generateCreateEvent<U extends object>(
     ledger: Ledger,
     initData: EntityData<U>
@@ -74,35 +94,47 @@ export class Event<T extends object> {
   id!: string;
   timestamp!: number;
   type!: EventType;
-  data!: Partial<EntityData<T>> | EntityData<T>;
   breakpoint?: string | number;
+  instructions: PropertyChangeInstruction[] = [];
 
   constructor(e: EventData<T>) {
     this.id = e.id;
     this.timestamp = e.timestamp;
     this.type = e.type;
-    this.data = omit(e.data, "name") as Partial<EntityData<T>>;
     this.breakpoint = e.breakpoint;
+
+    if (e.data) this.instructions = this.generateChangeInstructions(e.data);
+  }
+
+  private generateChangeInstructions(
+    data: EntityChangeData<T> | EntityData<T>
+  ) {
+    const bodyPaths = getObjectPaths(data);
+    const result: PropertyChangeInstruction[] = [];
+
+    for (const path of bodyPaths) {
+      const changeInstruction = new PropertyChangeInstruction(path, data);
+      result.push(changeInstruction);
+    }
+
+    return result;
   }
 
   apply(to: object): void {
     if (this.type === EventType.BREAKPOINT) return;
 
-    const bodyPaths = getObjectPaths(this.data);
-
-    for (const path of bodyPaths) {
-      const changeInstruction = new PropertyChangeInstruction(path, this.data);
-
-      changeInstruction.apply(to);
+    for (const instruction of this.instructions) {
+      instruction.apply(to);
     }
   }
 
-  serialize(): EventData<T> {
+  serialize(): SerializedEvent {
     return {
       id: this.id,
       timestamp: this.timestamp,
       type: this.type,
-      data: cloneDeep(this.data) as DeepPartial<EntityData<T>>,
+      breakpoint: this.breakpoint,
+      instructions: this.instructions.map((i) => i.serialize()),
     };
   }
 }

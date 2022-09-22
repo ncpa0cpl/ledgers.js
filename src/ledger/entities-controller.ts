@@ -6,9 +6,9 @@ import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type {
   Copy,
-  EventData,
   SerializedEntities,
   SerializedEntityListEvents,
+  SerializedEvent,
 } from "../types";
 
 export class EntitiesController {
@@ -24,7 +24,7 @@ export class EntitiesController {
   private lists = new Map<string, EntityList<Entity>>();
   private copies = new Map<string, CopyList<Copy>>();
 
-  private loadIntoSingleton(name: string, data: EventData<any>[]): void {
+  private loadIntoSingleton(name: string, data: SerializedEvent[]): void {
     if (!this.singletons.has(name)) {
       throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }

@@ -24,13 +24,13 @@ export type EventData<T extends object> = {
   id: string;
   timestamp: number;
   type: EventType;
-  data: EntityChangeData<T> | EntityData<T>;
+  data?: EntityChangeData<T> | EntityData<T>;
   breakpoint?: string | number;
 };
 
 export type SerializedEntityListEvents<T extends object> = [
   string,
-  EventData<T>[]
+  SerializedEvent[]
 ][];
 
 export type SerializedBreakpoints = {
@@ -38,7 +38,7 @@ export type SerializedBreakpoints = {
 };
 
 export type SerializedEntities = {
-  singletonEntities: Record<string, EventData<any>[]>;
+  singletonEntities: Record<string, SerializedEvent[]>;
   listEntities: Record<string, SerializedEntityListEvents<any>>;
   copies: Record<string, Copy[]>;
 };
@@ -47,6 +47,19 @@ export type SerializedLedger = SerializedEntities &
   SerializedBreakpoints & {
     name: string;
   };
+
+export type SerializedEvent = {
+  id: string;
+  timestamp: number;
+  type: EventType;
+  breakpoint?: string | number;
+  instructions: SerializedChangeInstruction[];
+};
+
+export type SerializedChangeInstruction = {
+  propertyPath: string[];
+  value?: unknown;
+};
 
 export enum EntityReferenceType {
   SINGLETON = "SINGLETON",

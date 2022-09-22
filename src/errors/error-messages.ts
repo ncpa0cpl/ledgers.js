@@ -8,6 +8,8 @@ const createErrorMessageMap = <
 ) => v;
 
 export const ErrorMessage = createErrorMessageMap({
+  [ErrorCode.CORRUPTED_EVENT_ORDER]:
+    "First event of the entity was not a create event, event list is corrupted.",
   [ErrorCode.BREAKPOINT_ALREADY_EXISTS]:
     "Cannot add a breakpoint that already exists.",
   [ErrorCode.BREAKPOINT_DOES_NOT_EXIST]:

@@ -4,24 +4,25 @@ import { LedgerError } from "../errors/ledger-error";
 import { Event } from "../events/event";
 import { EventList } from "../events/event-list";
 import { Ledger } from "../ledger/ledger";
-import type { EntityChangeData, EntityData, EventData } from "../types";
+import type { EntityChangeData, EntityData, SerializedEvent } from "../types";
+import { extractEntityIdFromEvent } from "../utilities/extract-entity-id-from-event";
 
 export class EntitySingleton<E extends Entity> {
   static _loadFrom<E2 extends Entity>(
     singleton: EntitySingleton<E2>,
-    eventData: EventData<any>[]
+    eventData: SerializedEvent[]
   ): void {
     if (singleton.events.length > 0) {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
-    eventData.forEach((e) => singleton.events.add(new Event(e)));
+    eventData.forEach((e) => singleton.events.add(Event._loadFrom(e)));
     singleton.events.commit();
   }
 
   static _serialize<E extends Entity>(
     singleton: EntitySingleton<E>
-  ): EventData<E>[] {
+  ): SerializedEvent[] {
     return singleton.events.serialize();
   }
 
@@ -112,7 +113,7 @@ export class EntitySingleton<E extends Entity> {
       throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
     }
 
-    return firstEvent.data.id!;
+    return extractEntityIdFromEvent(firstEvent);
   }
 
   get(breakpoint?: string | number): E {

@@ -2,7 +2,7 @@ import type { Entity } from "../entity/entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import { Ledger } from "../ledger/ledger";
-import type { EventData } from "../types";
+import type { SerializedEvent } from "../types";
 import { EventType } from "../types";
 import type { Event } from "./event";
 
@@ -55,7 +55,7 @@ export class EventList<E extends Entity> {
     return events;
   }
 
-  serialize(): EventData<E>[] {
+  serialize(): SerializedEvent[] {
     if (this.isTransactionPending) {
       throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
     }
