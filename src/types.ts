@@ -22,19 +22,24 @@ export class Copy {
 
 export type EventData<T extends object> = {
   id: string;
-  timestamp: number;
-  type: EventType;
   data?: EntityChangeData<T> | EntityData<T>;
-  breakpoint?: string | number;
 };
 
-export type EventMetadata = {
+export type AdditionalEventData = {
   trigger?: string;
   extra?: Record<string, string | number | Array<string | number>>;
 };
 
-export type PrivateEventMetadata = EventMetadata & {
+export type EventMetadata = AdditionalEventData & {
+  timestamp: number;
+  type: EventType;
+  breakpoint?: string | number;
   entity: string;
+  ledgerVersion: number;
+};
+
+export type PrivateEventMetadata = EventMetadata & {
+  appliedMigrations?: string[];
 };
 
 export type SerializedEntityListEvents<T extends object> = [
@@ -62,9 +67,6 @@ export type SerializedLedger = SerializedEntities &
 
 export type SerializedEvent = {
   id: string;
-  timestamp: number;
-  type: EventType;
-  breakpoint?: string | number;
   instructions: SerializedChangeInstruction[];
   metadata: PrivateEventMetadata;
 };
@@ -86,3 +88,14 @@ export type Reference<E extends Entity | Copy> = {
   type: EntityReferenceType;
   id: E["id"];
 };
+
+export interface MigrationInterface<B extends object, A extends object> {
+  entity: string;
+  version: number;
+
+  migrateCreateEvent?: (eventData: B, meta: AdditionalEventData) => A;
+  migrateChangeEvent?: (
+    eventData: Partial<B>,
+    meta: AdditionalEventData
+  ) => Partial<A>;
+}

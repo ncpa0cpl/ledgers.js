@@ -2,15 +2,24 @@ import * as uuid from "uuid";
 import type { Entity } from "../entity/entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
-import type { Copy, Reference, SerializedLedger } from "../types";
+import type {
+  Copy,
+  MigrationInterface,
+  Reference,
+  SerializedLedger,
+} from "../types";
 import { EntityReferenceType } from "../types";
 import { BreakpointController } from "./breakpoint-controller";
 import { EntitiesController } from "./entities-controller";
+import { MigrationController } from "./migration-controller";
 import { Transaction } from "./transaction";
 
 type InitializeArgs<T> = T extends new (...args: infer A) => any ? A : never;
 
 export abstract class Ledger {
+  private static migrations: MigrationController;
+  protected static version = 1;
+
   static loadFrom<T extends new (...args: any[]) => Ledger>(
     this: T,
     data: SerializedLedger,
@@ -28,6 +37,22 @@ export abstract class Ledger {
     return ledger as InstanceType<T>;
   }
 
+  static registerMigrations(
+    ...migrations: MigrationInterface<any, any>[]
+  ): void {
+    this._ensureMigrationControllerExists();
+    for (const migration of migrations) {
+      this.migrations.registerMigration(migration);
+    }
+  }
+
+  /** @internal */
+  static _ensureMigrationControllerExists(): void {
+    if (!this.hasOwnProperty("migrations")) {
+      this.migrations = new MigrationController(this);
+    }
+  }
+
   /** @internal */
   static _getTransaction(l: Ledger) {
     return l.transaction;
@@ -41,6 +66,19 @@ export abstract class Ledger {
   /** @internal */
   static _getBreakpointController(l: Ledger): BreakpointController {
     return l.breakpoints;
+  }
+
+  /** @internal */
+  static _getMigrationController(l: Ledger): MigrationController {
+    const c = Reflect.getPrototypeOf(l)?.constructor as typeof Ledger;
+    c._ensureMigrationControllerExists();
+    return c.migrations;
+  }
+
+  /** @internal */
+  static _getVersion(l: Ledger): number {
+    const c = Reflect.getPrototypeOf(l)?.constructor as typeof Ledger;
+    return c.version;
   }
 
   private entities = new EntitiesController();

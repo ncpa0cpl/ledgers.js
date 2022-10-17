@@ -1,13 +1,14 @@
 import { Entity } from "../entity/entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
+import type { GenerateEventData } from "../events/event";
 import { Event } from "../events/event";
 import { EventList } from "../events/event-list";
 import { Ledger } from "../ledger/ledger";
 import type {
+  AdditionalEventData,
   EntityChangeData,
   EntityData,
-  EventMetadata,
   SerializedEntityListEvents,
   SerializedEvent,
 } from "../types";
@@ -22,6 +23,10 @@ export class EntityList<E extends Entity> {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
+    const migrationController = Ledger._getMigrationController(
+      list.parentLedger
+    );
+
     for (const [id, events] of eventData) {
       const eventList = new EventList<E2>(list.parentLedger);
 
@@ -30,7 +35,9 @@ export class EntityList<E extends Entity> {
           throw new LedgerError(ErrorCode.EVENT_ASSOCIATION_ERROR);
         }
 
-        eventList.add(Event._loadFrom(e));
+        const event = migrationController.migrateEvent(Event._loadFrom(e));
+
+        eventList.add(event);
       }
 
       eventList.commit();
@@ -120,9 +127,9 @@ export class EntityList<E extends Entity> {
 
   private eventBreakpoint(
     breakpoint: string | number,
-    eventMetadata?: EventMetadata
+    eventMetadata?: AdditionalEventData
   ): void {
-    const meta = {
+    const meta: GenerateEventData = {
       ...eventMetadata,
       entity: this.entityName,
     };
@@ -139,14 +146,14 @@ export class EntityList<E extends Entity> {
     }
   }
 
-  create(initData: EntityData<E>, eventMetadata?: EventMetadata): string {
+  create(initData: EntityData<E>, eventMetadata?: AdditionalEventData): string {
     initData.id ??= this.parentLedger.generateNextID();
 
     if (this.entitiesEvents.has(initData.id)) {
       throw new LedgerError(ErrorCode.DUPLICATE_IDENTIFIER);
     }
 
-    const meta = {
+    const meta: GenerateEventData = {
       ...eventMetadata,
       entity: this.entityName,
     };
@@ -177,7 +184,7 @@ export class EntityList<E extends Entity> {
   change(
     id: string,
     changes: EntityChangeData<E>,
-    eventMetadata?: EventMetadata
+    eventMetadata?: AdditionalEventData
   ): void {
     const eventList = this.entitiesEvents.get(id);
 
@@ -185,7 +192,7 @@ export class EntityList<E extends Entity> {
       throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
     }
 
-    const meta = {
+    const meta: GenerateEventData = {
       ...eventMetadata,
       entity: this.entityName,
     };

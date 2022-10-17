@@ -19,7 +19,7 @@ export abstract class Entity {
       event.apply(entity);
     }
 
-    entity.createdAt = events[0]!.timestamp;
-    entity.updatedAt = events[events.length - 1]!.timestamp;
+    entity.createdAt = events[0]!.eventMetadata.timestamp;
+    entity.updatedAt = events[events.length - 1]!.eventMetadata.timestamp;
   }
 }

@@ -1,0 +1,18 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`migrations should apply migrations 1`] = `
+Object {
+  "copies": Object {},
+  "listEntities": Object {},
+  "singletonEntities": Object {
+    "FooEntity": FooEntityV3 {
+      "a": "Num(12)",
+      "b": "12",
+      "createdAt": 1666032490844,
+      "id": "6cab2145-3b2b-4c4e-9c1f-50994e4363fd",
+      "name": "FooEntity",
+      "updatedAt": 1666032490844,
+    },
+  },
+}
+`;

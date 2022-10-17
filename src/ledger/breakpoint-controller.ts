@@ -73,7 +73,7 @@ export class BreakpointController {
     const result: Array<Event<E>> = [];
 
     for (const event of events) {
-      if (event.breakpoint === breakpoint) {
+      if (event.eventMetadata.breakpoint === breakpoint) {
         break;
       }
 

@@ -4,7 +4,7 @@ import type { Event } from "../events/event";
 import { EventType } from "../types";
 
 export const extractEntityIdFromEvent = (event: Event<any>): string => {
-  if (event.type !== EventType.CREATE) {
+  if (event.eventMetadata.type !== EventType.CREATE) {
     throw new LedgerError(ErrorCode.CORRUPTED_EVENT_ORDER);
   }
 

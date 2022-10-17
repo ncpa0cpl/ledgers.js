@@ -1,7 +1,8 @@
 import { cloneDeep, omit } from "lodash";
-import type { Ledger } from "../ledger/ledger";
+import { Ledger } from "../ledger/ledger";
 import type { DeepPartial } from "../type-utils";
 import type {
+  AdditionalEventData,
   EntityChangeData,
   EntityData,
   EventData,
@@ -10,6 +11,8 @@ import type {
 } from "../types";
 import { EventType } from "../types";
 import { PropertyChangeInstruction } from "./property-change-instruction";
+
+export type GenerateEventData = AdditionalEventData & { entity: string };
 
 export function getObjectPaths(obj: object) {
   const paths = new Set<string[]>();
@@ -34,15 +37,7 @@ export function getObjectPaths(obj: object) {
 export class Event<T extends object> {
   /** @internal */
   static _loadFrom<U extends object>(serialized: SerializedEvent): Event<U> {
-    const event = new Event<U>(
-      {
-        id: serialized.id,
-        timestamp: serialized.timestamp,
-        type: serialized.type,
-        breakpoint: serialized.breakpoint,
-      },
-      serialized.metadata
-    );
+    const event = new Event<U>({ id: serialized.id }, serialized.metadata);
 
     event.instructions = serialized.instructions.map((i) =>
       PropertyChangeInstruction._loadFrom(i)
@@ -55,18 +50,21 @@ export class Event<T extends object> {
   static _generateCreateEvent<U extends object>(
     ledger: Ledger,
     initData: EntityData<U>,
-    eventMetadata: PrivateEventMetadata
+    eventMetadata: GenerateEventData
   ): Event<U> {
     return new Event<U>(
       {
         id: ledger.generateNextID(),
-        timestamp: ledger.generateTimestamp(),
-        type: EventType.CREATE,
         data: omit(initData, "name", "createdAt", "updatedAt") as DeepPartial<
           EntityData<U>
         >,
       },
-      eventMetadata
+      {
+        ...eventMetadata,
+        ledgerVersion: Ledger._getVersion(ledger),
+        type: EventType.CREATE,
+        timestamp: ledger.generateTimestamp(),
+      }
     );
   }
 
@@ -74,13 +72,11 @@ export class Event<T extends object> {
   static _generateChangeEvent<U extends object>(
     ledger: Ledger,
     changes: EntityChangeData<U>,
-    eventMetadata: PrivateEventMetadata
+    eventMetadata: GenerateEventData
   ): Event<U> {
     return new Event<U>(
       {
         id: ledger.generateNextID(),
-        timestamp: ledger.generateTimestamp(),
-        type: EventType.CHANGE,
         data: omit(
           changes,
           "id",
@@ -89,7 +85,12 @@ export class Event<T extends object> {
           "updatedAt"
         ) as DeepPartial<EntityData<U>>,
       },
-      eventMetadata
+      {
+        ...eventMetadata,
+        ledgerVersion: Ledger._getVersion(ledger),
+        timestamp: ledger.generateTimestamp(),
+        type: EventType.CHANGE,
+      }
     );
   }
 
@@ -97,17 +98,20 @@ export class Event<T extends object> {
   static _generateBreakpointEvent<U extends object>(
     ledger: Ledger,
     breakpoint: string | number,
-    eventMetadata: PrivateEventMetadata
+    eventMetadata: GenerateEventData
   ): Event<U> {
     return new Event<U>(
       {
         id: ledger.generateNextID(),
+        data: {} as any,
+      },
+      {
+        ...eventMetadata,
         timestamp: ledger.generateTimestamp(),
         type: EventType.BREAKPOINT,
-        data: {} as any,
         breakpoint,
-      },
-      eventMetadata
+        ledgerVersion: Ledger._getVersion(ledger),
+      }
     );
   }
 
@@ -126,38 +130,50 @@ export class Event<T extends object> {
     return result;
   }
 
+  /**
+   * Clones the given Event and replaces it's Property Change
+   * Instructions with new ones based on the given data.
+   *
+   * @internal
+   */
+  static _cloneAndReplace<T extends object>(
+    event: Event<T>,
+    data: EntityData<T> | DeepPartial<Omit<EntityData<T>, "id">>
+  ): Event<T> {
+    return new Event<T>(
+      {
+        id: event.id,
+        data,
+      },
+      cloneDeep(event.eventMetadata)
+    );
+  }
+
   id!: string;
-  timestamp!: number;
-  type!: EventType;
-  breakpoint?: string | number;
   instructions: PropertyChangeInstruction[] = [];
   eventMetadata: PrivateEventMetadata;
 
   constructor(e: EventData<T>, eventMetadata: PrivateEventMetadata) {
     this.id = e.id;
-    this.timestamp = e.timestamp;
-    this.type = e.type;
-    this.breakpoint = e.breakpoint;
     this.eventMetadata = eventMetadata;
 
     if (e.data)
       this.instructions = Event._generateChangeInstructions<T>(e.data);
   }
 
-  apply(to: object): void {
-    if (this.type === EventType.BREAKPOINT) return;
+  apply(to: object): object {
+    if (this.eventMetadata.type === EventType.BREAKPOINT) return to;
 
     for (const instruction of this.instructions) {
       instruction.apply(to);
     }
+
+    return to;
   }
 
   serialize(): SerializedEvent {
     return {
       id: this.id,
-      timestamp: this.timestamp,
-      type: this.type,
-      breakpoint: this.breakpoint,
       instructions: this.instructions.map((i) => i.serialize()),
       metadata: cloneDeep(this.eventMetadata),
     };

@@ -40,7 +40,7 @@ export class EventList<E extends Entity> {
 
   hasCreateEventBeforeBreakpoint(breakpoint: string | number): boolean {
     const events = this.getAsArray(breakpoint);
-    return events.some((e) => e.type === EventType.CREATE);
+    return events.some((e) => e.eventMetadata.type === EventType.CREATE);
   }
 
   getAsArray(breakpoint?: string | number): Event<E>[] {
