@@ -34,7 +34,7 @@ describe("EntitySingleton", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
       setNextTimestampTo = 1234567;
-      singleton.eventCreate({ prop: "foo" });
+      singleton.create({ prop: "foo" });
 
       expect(singleton.isInitiated()).toEqual(true);
       expect(singleton.get()).toMatchObject({
@@ -47,9 +47,9 @@ describe("EntitySingleton", () => {
 
     it("should throw an error when dispatching a create event to already initialized singleton", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
-      singleton.eventCreate({ prop: "foo" });
+      singleton.create({ prop: "foo" });
 
-      expect(() => singleton.eventCreate({ prop: "foo" })).toThrowError(
+      expect(() => singleton.create({ prop: "foo" })).toThrowError(
         new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED)
       );
     });
@@ -57,7 +57,7 @@ describe("EntitySingleton", () => {
     it("should immediately commit the event if no transaction is started", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
-      singleton.eventCreate({ prop: "foo" });
+      singleton.create({ prop: "foo" });
 
       expect(singleton["events"].isTransactionPending).toEqual(false);
       expect(singleton.isInitiated()).toEqual(true);
@@ -67,7 +67,7 @@ describe("EntitySingleton", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
       ledger.startTransaction();
-      singleton.eventCreate({ prop: "foo" });
+      singleton.create({ prop: "foo" });
       expect(singleton["events"].isTransactionPending).toEqual(true);
       expect(singleton.isInitiated()).toEqual(true);
       ledger.rollbackTransaction();
@@ -82,7 +82,7 @@ describe("EntitySingleton", () => {
     it("should use the provided ID if specified", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
-      singleton.eventCreate({ id: "123", prop: "foo" });
+      singleton.create({ id: "123", prop: "foo" });
 
       expect(singleton.get()).toMatchObject({ id: "123", prop: "foo" });
     });
@@ -93,7 +93,7 @@ describe("EntitySingleton", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
       setNextTimestampTo = 5555555;
-      singleton.eventCreate({ prop: "foo" });
+      singleton.create({ prop: "foo" });
 
       expect(singleton.get()).toMatchObject({
         id: expect.any(String),
@@ -103,7 +103,7 @@ describe("EntitySingleton", () => {
       });
 
       setNextTimestampTo = 5555560;
-      singleton.eventChange({
+      singleton.change({
         prop: "bar",
       });
 
@@ -118,7 +118,7 @@ describe("EntitySingleton", () => {
     it("should throw an error when dispatching a change event to a non-initialized singleton", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
-      expect(() => singleton.eventChange({ prop: "bar" })).toThrowError(
+      expect(() => singleton.change({ prop: "bar" })).toThrowError(
         new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED)
       );
     });
@@ -126,18 +126,18 @@ describe("EntitySingleton", () => {
     it("should immediately commit the event if no transaction is started", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
-      singleton.eventCreate({ prop: "foo" });
-      singleton.eventChange({ prop: "bar" });
+      singleton.create({ prop: "foo" });
+      singleton.change({ prop: "bar" });
 
       expect(singleton["events"].isTransactionPending).toEqual(false);
     });
 
     it("should not commit the event if a transaction is started", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
-      singleton.eventCreate({ prop: "foo" });
+      singleton.create({ prop: "foo" });
 
       ledger.startTransaction();
-      singleton.eventChange({ prop: "bar" });
+      singleton.change({ prop: "bar" });
       expect(singleton["events"].isTransactionPending).toEqual(true);
       expect(singleton.get()).toMatchObject({ prop: "bar" });
       ledger.rollbackTransaction();
@@ -166,7 +166,7 @@ describe("EntitySingleton", () => {
     it("should correctly return the entity id", () => {
       const singleton = new EntitySingleton(ledger, TestSingleton);
 
-      singleton.eventCreate({ id: "123", prop: "foo" });
+      singleton.create({ id: "123", prop: "foo" });
 
       expect(singleton.getID()).toEqual("123");
     });

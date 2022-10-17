@@ -12,13 +12,16 @@ export const generateNextTestTimestamp = () => {
   return startTimestamp;
 };
 
-export const eventMock = (e: Partial<Event<any>>): Event<any> => {
+export const eventMock = (
+  e: Partial<Event<any> & { data: {} }>
+): Event<any> => {
   return {
     apply: e.apply ?? (() => {}),
-    data: e.data ?? {},
     id: e.id ?? generateNextTestID(),
     serialize: e.serialize ?? ((() => ({})) as any),
     timestamp: e.timestamp ?? generateNextTestTimestamp(),
     type: e.type ?? EventType.CREATE,
+    instructions: Event._generateChangeInstructions(e.data ?? {}),
+    eventMetadata: e.eventMetadata ?? { entity: "" },
   };
 };

@@ -7,6 +7,7 @@ import { Ledger } from "../ledger/ledger";
 import type {
   EntityChangeData,
   EntityData,
+  EventMetadata,
   SerializedEntityListEvents,
   SerializedEvent,
 } from "../types";
@@ -23,7 +24,15 @@ export class EntityList<E extends Entity> {
 
     for (const [id, events] of eventData) {
       const eventList = new EventList<E2>(list.parentLedger);
-      events.forEach((e) => eventList.add(Event._loadFrom(e)));
+
+      for (const e of events) {
+        if (list.entityName !== e.metadata.entity) {
+          throw new LedgerError(ErrorCode.EVENT_ASSOCIATION_ERROR);
+        }
+
+        eventList.add(Event._loadFrom(e));
+      }
+
       eventList.commit();
 
       list.entitiesEvents.set(id, eventList);
@@ -109,11 +118,20 @@ export class EntityList<E extends Entity> {
     return entity;
   }
 
-  private eventBreakpoint(breakpoint: string | number): void {
+  private eventBreakpoint(
+    breakpoint: string | number,
+    eventMetadata?: EventMetadata
+  ): void {
+    const meta = {
+      ...eventMetadata,
+      entity: this.entityName,
+    };
+
     for (const eventList of this.entitiesEvents.values()) {
       const event = Event._generateBreakpointEvent<E>(
         this.parentLedger,
-        breakpoint
+        breakpoint,
+        meta
       );
 
       eventList.add(event);
@@ -121,12 +139,17 @@ export class EntityList<E extends Entity> {
     }
   }
 
-  eventCreate(initData: EntityData<E>): string {
+  create(initData: EntityData<E>, eventMetadata?: EventMetadata): string {
     initData.id ??= this.parentLedger.generateNextID();
 
     if (this.entitiesEvents.has(initData.id)) {
       throw new LedgerError(ErrorCode.DUPLICATE_IDENTIFIER);
     }
+
+    const meta = {
+      ...eventMetadata,
+      entity: this.entityName,
+    };
 
     const previousBreakpoints = Ledger._getBreakpointController(
       this.parentLedger
@@ -136,11 +159,11 @@ export class EntityList<E extends Entity> {
 
     for (const breakpoint of previousBreakpoints) {
       eventList.add(
-        Event._generateBreakpointEvent<E>(this.parentLedger, breakpoint)
+        Event._generateBreakpointEvent<E>(this.parentLedger, breakpoint, meta)
       );
     }
 
-    const event = Event._generateCreateEvent(this.parentLedger, initData);
+    const event = Event._generateCreateEvent(this.parentLedger, initData, meta);
 
     eventList.add(event);
 
@@ -151,14 +174,27 @@ export class EntityList<E extends Entity> {
     return initData.id;
   }
 
-  eventChange(id: string, changes: EntityChangeData<E>): void {
+  change(
+    id: string,
+    changes: EntityChangeData<E>,
+    eventMetadata?: EventMetadata
+  ): void {
     const eventList = this.entitiesEvents.get(id);
 
     if (eventList === undefined) {
       throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
     }
 
-    const event = Event._generateChangeEvent<E>(this.parentLedger, changes);
+    const meta = {
+      ...eventMetadata,
+      entity: this.entityName,
+    };
+
+    const event = Event._generateChangeEvent<E>(
+      this.parentLedger,
+      changes,
+      meta
+    );
 
     eventList.add(event);
 

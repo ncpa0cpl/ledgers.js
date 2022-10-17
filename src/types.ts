@@ -28,6 +28,15 @@ export type EventData<T extends object> = {
   breakpoint?: string | number;
 };
 
+export type EventMetadata = {
+  trigger?: string;
+  extra?: Record<string, string | number | Array<string | number>>;
+};
+
+export type PrivateEventMetadata = EventMetadata & {
+  entity: string;
+};
+
 export type SerializedEntityListEvents<T extends object> = [
   string,
   SerializedEvent[]
@@ -54,6 +63,7 @@ export type SerializedEvent = {
   type: EventType;
   breakpoint?: string | number;
   instructions: SerializedChangeInstruction[];
+  metadata: PrivateEventMetadata;
 };
 
 export type SerializedChangeInstruction = {

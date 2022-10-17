@@ -30,6 +30,8 @@ export const ErrorMessage = createErrorMessageMap({
     "Entity not found. Specified entity was not found within this ledger.",
   [ErrorCode.ENTITY_NOT_YET_CREATED]:
     "Entity not yet created. An entity must receive an event-create before it can be read or modified with an event-change.",
+  [ErrorCode.EVENT_ASSOCIATION_ERROR]:
+    "Event association error. Event does not belong to the Entity it's assigned to.",
   [ErrorCode.LEDGER_NAMES_DO_NOT_MATCH]:
     "Ledger name does not match. Name of the ledger and the ledger name provided do not match.",
   [ErrorCode.SERIALIZING_DURING_TRANSACTION]:
