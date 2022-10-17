@@ -43,7 +43,10 @@ export type SerializedEntityListEvents<T extends object> = [
 ][];
 
 export type SerializedBreakpoints = {
-  ledgerBreakpoints: Array<string | number>;
+  ledgerBreakpoints: Array<{
+    breakpointID: string | number;
+    createdAt: number;
+  }>;
 };
 
 export type SerializedEntities = {

@@ -8,18 +8,21 @@ import { EntitiesController } from "./entities-controller";
 import { Ledger } from "./ledger";
 
 export class BreakpointController {
-  private breakpoints: Array<string | number> = [];
+  private breakpoints: Array<{
+    breakpointID: string | number;
+    createdAt: number;
+  }> = [];
 
   constructor(private ledger: Ledger) {}
 
   private ensureBreakpointDoesNotExist(breakpoint: string | number): void {
-    if (!this.breakpoints.includes(breakpoint)) {
+    if (!this.breakpoints.some((b) => b.breakpointID === breakpoint)) {
       throw new LedgerError(ErrorCode.BREAKPOINT_ALREADY_EXISTS);
     }
   }
 
   private ensureBreakpointExist(breakpoint: string | number): void {
-    if (!this.breakpoints.includes(breakpoint)) {
+    if (!this.breakpoints.some((b) => b.breakpointID === breakpoint)) {
       throw new LedgerError(ErrorCode.BREAKPOINT_DOES_NOT_EXIST);
     }
   }
@@ -27,7 +30,10 @@ export class BreakpointController {
   addBreakpoint(breakpoint: string | number): void {
     this.ensureBreakpointDoesNotExist(breakpoint);
 
-    this.breakpoints.push(breakpoint);
+    this.breakpoints.push({
+      breakpointID: breakpoint,
+      createdAt: this.ledger.generateTimestamp(),
+    });
 
     const controller = Ledger._getEntityController(this.ledger);
 
@@ -44,10 +50,17 @@ export class BreakpointController {
   }
 
   hasBreakpoint(breakpoint: string | number): boolean {
-    return this.breakpoints.includes(breakpoint);
+    return this.breakpoints.some((b) => b.breakpointID === breakpoint);
   }
 
   getBreakpoints(): Array<string | number> {
+    return this.breakpoints.map((b) => b.breakpointID);
+  }
+
+  getBreakpointsWithTimestamps(): Array<{
+    breakpointID: string | number;
+    createdAt: number;
+  }> {
     return [...this.breakpoints];
   }
 
@@ -75,7 +88,8 @@ export class BreakpointController {
       throw new LedgerError(ErrorCode.BREAKPOINT_ALREADY_EXISTS);
     }
 
-    this.breakpoints = data.ledgerBreakpoints;
+    this.breakpoints = [...data.ledgerBreakpoints];
+    this.breakpoints.sort((a, b) => a.createdAt - b.createdAt);
   }
 
   serialize(): SerializedBreakpoints {

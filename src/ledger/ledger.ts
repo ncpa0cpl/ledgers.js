@@ -183,7 +183,25 @@ export abstract class Ledger {
     };
   }
 
-  snapshot(breakpoint?: string | number): object {
+  getSnapshot(breakpoint?: string | number): object {
     return { ...this.entities.getSnapshot(breakpoint) };
+  }
+
+  getHistory(): Array<{
+    time: number;
+    breakpoint?: string | number;
+    snapshot: object;
+  }> {
+    return [
+      ...this.breakpoints.getBreakpointsWithTimestamps().map((breakpoint) => ({
+        time: breakpoint.createdAt,
+        breakpoint: breakpoint.breakpointID,
+        snapshot: this.getSnapshot(breakpoint.breakpointID),
+      })),
+      {
+        time: this.generateTimestamp(),
+        snapshot: this.getSnapshot(),
+      },
+    ];
   }
 }
