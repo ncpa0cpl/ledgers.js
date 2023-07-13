@@ -59,7 +59,7 @@ describe("EntitySingleton", () => {
 
       singleton.create({ prop: "foo" });
 
-      expect(singleton["events"].isTransactionPending).toEqual(false);
+      expect(singleton["isInTransaction"]).toEqual(false);
       expect(singleton.isInitiated()).toEqual(true);
     });
 
@@ -68,10 +68,10 @@ describe("EntitySingleton", () => {
 
       ledger.startTransaction();
       singleton.create({ prop: "foo" });
-      expect(singleton["events"].isTransactionPending).toEqual(true);
+      expect(singleton["isInTransaction"]).toEqual(true);
       expect(singleton.isInitiated()).toEqual(true);
       ledger.rollbackTransaction();
-      expect(singleton["events"].isTransactionPending).toEqual(false);
+      expect(singleton["isInTransaction"]).toEqual(false);
       expect(singleton.isInitiated()).toEqual(false);
 
       expect(() => singleton.get()).toThrowError(
@@ -129,7 +129,7 @@ describe("EntitySingleton", () => {
       singleton.create({ prop: "foo" });
       singleton.change({ prop: "bar" });
 
-      expect(singleton["events"].isTransactionPending).toEqual(false);
+      expect(singleton["isInTransaction"]).toEqual(false);
     });
 
     it("should not commit the event if a transaction is started", () => {
@@ -138,10 +138,10 @@ describe("EntitySingleton", () => {
 
       ledger.startTransaction();
       singleton.change({ prop: "bar" });
-      expect(singleton["events"].isTransactionPending).toEqual(true);
+      expect(singleton["isInTransaction"]).toEqual(true);
       expect(singleton.get()).toMatchObject({ prop: "bar" });
       ledger.rollbackTransaction();
-      expect(singleton["events"].isTransactionPending).toEqual(false);
+      expect(singleton["isInTransaction"]).toEqual(false);
       expect(singleton.get()).toMatchObject({ prop: "foo" });
     });
   });

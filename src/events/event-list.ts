@@ -1,39 +1,20 @@
 import type { BaseEntity } from "../entity/base-entity";
-import { ErrorCode } from "../errors/error-codes";
-import { LedgerError } from "../errors/ledger-error";
 import { Ledger } from "../ledger/ledger";
 import type { SerializedEvent } from "../types";
 import { EventType } from "../types";
 import type { Event } from "./event";
 
 export class EventList<E extends BaseEntity> {
-  private committed: Event<E>[] = [];
-  private staged: Event<E>[] = [];
+  private events: Event<E>[] = [];
 
   constructor(private ledger: Ledger) {}
 
-  get isTransactionPending(): boolean {
-    return this.staged.length > 0;
-  }
-
   get length(): number {
-    return this.staged.length + this.committed.length;
-  }
-
-  commit(): EventList<E> {
-    this.committed.push(...this.staged.splice(0));
-
-    return this;
-  }
-
-  rollback(): EventList<E> {
-    this.staged.splice(0);
-
-    return this;
+    return this.events.length;
   }
 
   add(event: Event<E>): EventList<E> {
-    this.staged.push(event);
+    this.events.push(event);
 
     return this;
   }
@@ -43,8 +24,12 @@ export class EventList<E extends BaseEntity> {
     return events.some((e) => e.eventMetadata.type === EventType.CREATE);
   }
 
+  getFirst() {
+    return this.events[0];
+  }
+
   getAsArray(breakpoint?: string | number): Event<E>[] {
-    const events = [...this.committed, ...this.staged];
+    const events = this.events.slice();
 
     if (breakpoint !== undefined) {
       return Ledger._getBreakpointController(
@@ -56,10 +41,12 @@ export class EventList<E extends BaseEntity> {
   }
 
   serialize(): SerializedEvent[] {
-    if (this.isTransactionPending) {
-      throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
-    }
+    return this.events.map((e) => e.serialize());
+  }
 
-    return this.committed.map((e) => e.serialize());
+  copy() {
+    const copy = new EventList<E>(this.ledger);
+    copy.events = this.events.slice();
+    return copy;
   }
 }

@@ -18,7 +18,7 @@ export class CopiesList<C extends Copy, Name extends string = string> {
 
   /** @internal */
   static _serialize<C extends Copy>(list: CopiesList<C>): C[] {
-    if (list.isTransactionPending) {
+    if (list.isInTransaction) {
       throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
     }
 
@@ -28,7 +28,7 @@ export class CopiesList<C extends Copy, Name extends string = string> {
   private parentLedger: Ledger;
   private name: string;
   private committed = new Map<string, C>();
-  private staged = new Map<string, C>();
+  private staged: Map<string, C> | null = null;
   private txInterface: TransactionInterface;
 
   constructor(parentLedger: Ledger, name: Name) {
@@ -43,53 +43,54 @@ export class CopiesList<C extends Copy, Name extends string = string> {
     };
   }
 
-  private mergeMaps() {
-    const tmpCopies = new Map(this.committed);
-
-    for (const [name, copy] of this.staged) {
-      tmpCopies.set(name, copy);
-    }
-
-    return tmpCopies;
-  }
-
-  private get isTransactionPending(): boolean {
-    return this.staged.size > 0;
+  /**
+   * If there are uncommitted changes on this entity, this value will be `true`.
+   */
+  get isInTransaction(): boolean {
+    return !!this.staged;
   }
 
   private commit() {
-    this.committed = this.mergeMaps();
-    this.staged = new Map();
+    this.committed = this.staged ?? this.committed;
+    this.staged = null;
   }
 
   private rollback() {
-    this.staged.clear();
+    this.staged = null;
   }
 
-  private addToTransaction(): void {
+  private perform<R>(action: (copies: Map<string, C>) => R): R {
     const tx = Ledger._getTransaction(this.parentLedger);
 
     if (tx) {
+      if (this.staged === null) {
+        this.staged = new Map(this.committed);
+      }
+
       tx.add(this.txInterface);
+      return action(this.staged);
     } else {
-      this.commit();
+      return action(this.committed);
     }
   }
 
   has(id: string): boolean {
-    return this.committed.has(id) || this.staged.has(id);
+    return this.perform((copies) => copies.has(id));
   }
 
   put(copy: C): void {
-    this.staged.set(copy.id, copy);
-    this.addToTransaction();
+    this.perform((copies) => copies.set(copy.id, copy));
   }
 
   get(id: string): C | undefined {
-    return this.staged.get(id) ?? this.committed.get(id);
+    return this.perform((copies) => copies.get(id));
+  }
+
+  delete(id: string) {
+    this.perform((copies) => copies.delete(id));
   }
 
   getAll(): C[] {
-    return [...this.mergeMaps().values()];
+    return this.perform((copies) => [...copies.values()]);
   }
 }

@@ -5,6 +5,7 @@ import type { GenerateEventData } from "../events/event";
 import { Event } from "../events/event";
 import { EventList } from "../events/event-list";
 import { Ledger } from "../ledger/ledger";
+import type { TransactionInterface } from "../ledger/transaction";
 import type {
   AdditionalEventData,
   EntityChangeData,
@@ -19,7 +20,7 @@ export class EntityList<E extends BaseEntity> {
     list: EntityList<E2>,
     eventData: SerializedEntityListEvents,
   ): void {
-    if (list.entitiesEvents.size > 0) {
+    if (list.committedEvents.size > 0) {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
@@ -40,9 +41,7 @@ export class EntityList<E extends BaseEntity> {
         eventList.add(event);
       }
 
-      eventList.commit();
-
-      list.entitiesEvents.set(id, eventList);
+      list.committedEvents.set(id, eventList);
     }
   }
 
@@ -50,13 +49,11 @@ export class EntityList<E extends BaseEntity> {
   static _serialize<E extends BaseEntity>(
     list: EntityList<E>,
   ): SerializedEntityListEvents {
-    for (const [, eventList] of list.entitiesEvents) {
-      if (eventList.isTransactionPending) {
-        throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
-      }
+    if (list.isInTransaction) {
+      throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
     }
 
-    return [...list.entitiesEvents.entries()].map(
+    return [...list.committedEvents.entries()].map(
       ([id, events]): [string, SerializedEvent[]] => [id, events.serialize()],
     );
   }
@@ -72,7 +69,9 @@ export class EntityList<E extends BaseEntity> {
   private readonly parentLedger: Ledger;
   private readonly entityName: string;
   private readonly entityConstructor: new (parent: Ledger) => E;
-  private readonly entitiesEvents = new Map<string, EventList<E>>();
+  private committedEvents = new Map<string, EventList<E>>();
+  private stagedEvents: Map<string, EventList<E>> | null = null;
+  private txInterface: TransactionInterface;
 
   constructor(ledger: Ledger, entityConstructor: new (parent: Ledger) => E) {
     this.parentLedger = ledger;
@@ -84,29 +83,51 @@ export class EntityList<E extends BaseEntity> {
     }
 
     Ledger._getEntityController(ledger).registerList(this);
+
+    this.txInterface = {
+      commit: () => this.commit(),
+      rollback: () => this.rollback(),
+    };
   }
 
-  private postTransaction() {
-    const deleteEntries: string[] = [];
-
-    for (const [id, eventList] of this.entitiesEvents) {
-      if (eventList.length === 0) deleteEntries.push(id);
-    }
-
-    for (const id of deleteEntries) {
-      this.entitiesEvents.delete(id);
-    }
+  /**
+   * If there are uncommitted changes on this entity, this value will be `true`.
+   */
+  get isInTransaction(): boolean {
+    return !!this.stagedEvents;
   }
 
-  private addToTransaction(eventList: EventList<E>): void {
+  private commit() {
+    this.committedEvents = this.stagedEvents ?? this.committedEvents;
+    this.stagedEvents = null;
+  }
+
+  private rollback() {
+    this.stagedEvents = null;
+  }
+
+  private copyEvents(): Map<string, EventList<E>> {
+    const copy = new Map<string, EventList<E>>();
+
+    for (const [id, eventList] of this.committedEvents) {
+      copy.set(id, eventList.copy());
+    }
+
+    return copy;
+  }
+
+  private perform<R>(action: (events: Map<string, EventList<E>>) => R): R {
     const tx = Ledger._getTransaction(this.parentLedger);
 
     if (tx) {
-      tx.add(eventList);
-      tx.addPostTxHook(() => this.postTransaction());
+      if (this.stagedEvents === null) {
+        this.stagedEvents = this.copyEvents();
+      }
+
+      tx.add(this.txInterface);
+      return action(this.stagedEvents);
     } else {
-      eventList.commit();
-      this.postTransaction();
+      return action(this.committedEvents);
     }
   }
 
@@ -129,56 +150,64 @@ export class EntityList<E extends BaseEntity> {
     breakpoint: string | number,
     eventMetadata?: AdditionalEventData,
   ): void {
-    const meta: GenerateEventData = {
-      ...eventMetadata,
-      entity: this.entityName,
-    };
+    this.perform((entities) => {
+      const meta: GenerateEventData = {
+        ...eventMetadata,
+        entity: this.entityName,
+      };
 
-    for (const eventList of this.entitiesEvents.values()) {
-      const event = Event._generateBreakpointEvent<E>(
+      for (const eventList of entities.values()) {
+        const event = Event._generateBreakpointEvent<E>(
+          this.parentLedger,
+          breakpoint,
+          meta,
+        );
+
+        eventList.add(event);
+      }
+    });
+  }
+
+  create(initData: EntityData<E>, eventMetadata?: AdditionalEventData): string {
+    return this.perform((entities) => {
+      initData.id ??= this.parentLedger.generateNextID();
+
+      if (entities.has(initData.id)) {
+        throw new LedgerError(ErrorCode.DUPLICATE_IDENTIFIER);
+      }
+
+      const meta: GenerateEventData = {
+        ...eventMetadata,
+        entity: this.entityName,
+      };
+
+      const previousBreakpoints = Ledger._getBreakpointController(
         this.parentLedger,
-        breakpoint,
+      ).getBreakpoints();
+
+      const eventList = new EventList<E>(this.parentLedger);
+
+      for (const breakpoint of previousBreakpoints) {
+        eventList.add(
+          Event._generateBreakpointEvent<E>(
+            this.parentLedger,
+            breakpoint,
+            meta,
+          ),
+        );
+      }
+
+      const event = Event._generateCreateEvent(
+        this.parentLedger,
+        initData,
         meta,
       );
 
       eventList.add(event);
-      this.addToTransaction(eventList);
-    }
-  }
+      entities.set(initData.id, eventList);
 
-  create(initData: EntityData<E>, eventMetadata?: AdditionalEventData): string {
-    initData.id ??= this.parentLedger.generateNextID();
-
-    if (this.entitiesEvents.has(initData.id)) {
-      throw new LedgerError(ErrorCode.DUPLICATE_IDENTIFIER);
-    }
-
-    const meta: GenerateEventData = {
-      ...eventMetadata,
-      entity: this.entityName,
-    };
-
-    const previousBreakpoints = Ledger._getBreakpointController(
-      this.parentLedger,
-    ).getBreakpoints();
-
-    const eventList = new EventList<E>(this.parentLedger);
-
-    for (const breakpoint of previousBreakpoints) {
-      eventList.add(
-        Event._generateBreakpointEvent<E>(this.parentLedger, breakpoint, meta),
-      );
-    }
-
-    const event = Event._generateCreateEvent(this.parentLedger, initData, meta);
-
-    eventList.add(event);
-
-    this.entitiesEvents.set(initData.id, eventList);
-
-    this.addToTransaction(eventList);
-
-    return initData.id;
+      return initData.id;
+    });
   }
 
   change(
@@ -186,26 +215,26 @@ export class EntityList<E extends BaseEntity> {
     changes: EntityChangeData<E>,
     eventMetadata?: AdditionalEventData,
   ): void {
-    const eventList = this.entitiesEvents.get(id);
+    this.perform((entities) => {
+      const eventList = entities.get(id);
 
-    if (eventList === undefined) {
-      throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
-    }
+      if (eventList === undefined) {
+        throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
+      }
 
-    const meta: GenerateEventData = {
-      ...eventMetadata,
-      entity: this.entityName,
-    };
+      const meta: GenerateEventData = {
+        ...eventMetadata,
+        entity: this.entityName,
+      };
 
-    const event = Event._generateChangeEvent<E>(
-      this.parentLedger,
-      changes,
-      meta,
-    );
+      const event = Event._generateChangeEvent<E>(
+        this.parentLedger,
+        changes,
+        meta,
+      );
 
-    eventList.add(event);
-
-    this.addToTransaction(eventList);
+      eventList.add(event);
+    });
   }
 
   getName(): string {
@@ -213,39 +242,49 @@ export class EntityList<E extends BaseEntity> {
   }
 
   getAll(breakpoint?: string | number): E[] {
-    const entities: E[] = [];
+    return this.perform((entities) => {
+      const result: E[] = [];
 
-    for (const events of this.entitiesEvents.values()) {
-      if (
-        breakpoint !== undefined &&
-        !events.hasCreateEventBeforeBreakpoint(breakpoint)
-      )
-        continue;
+      for (const events of entities.values()) {
+        if (
+          breakpoint !== undefined &&
+          !events.hasCreateEventBeforeBreakpoint(breakpoint)
+        )
+          continue;
 
-      entities.push(this.createEntityFromEvents(events, breakpoint));
-    }
+        result.push(this.createEntityFromEvents(events, breakpoint));
+      }
 
-    return entities;
+      return result;
+    });
   }
 
   get(id: string, breakpoint?: string | number): E {
-    const eventList = this.entitiesEvents.get(id);
+    return this.perform((entities) => {
+      const eventList = entities.get(id);
 
-    if (!eventList) {
-      throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
-    }
+      if (!eventList) {
+        throw new LedgerError(ErrorCode.UNKNOWN_IDENTIFIER);
+      }
 
-    if (
-      breakpoint !== undefined &&
-      !eventList.hasCreateEventBeforeBreakpoint(breakpoint)
-    ) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
+      if (
+        breakpoint !== undefined &&
+        !eventList.hasCreateEventBeforeBreakpoint(breakpoint)
+      ) {
+        throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+      }
 
-    return this.createEntityFromEvents(eventList, breakpoint);
+      return this.createEntityFromEvents(eventList, breakpoint);
+    });
+  }
+
+  delete(id: string): void {
+    this.perform((entities) => {
+      entities.delete(id);
+    });
   }
 
   has(id: string): boolean {
-    return this.entitiesEvents.has(id);
+    return this.perform((entities) => entities.has(id));
   }
 }

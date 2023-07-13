@@ -71,25 +71,25 @@ describe("CopyList", () => {
     it("should immediately commit the change when there is no transaction started", () => {
       const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       copyList.put({ id: "1", label: "foo" });
-      expect(copyList["isTransactionPending"]).toEqual(false);
+      expect(copyList["isInTransaction"]).toEqual(false);
     });
 
     it("should not commit the changes during transaction until the commit", () => {
       const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
-      expect(copyList["isTransactionPending"]).toEqual(true);
+      expect(copyList["isInTransaction"]).toEqual(true);
       ledger.commitTransaction();
-      expect(copyList["isTransactionPending"]).toEqual(false);
+      expect(copyList["isInTransaction"]).toEqual(false);
     });
 
     it("should not commit the changes during transaction until the rollback", () => {
       const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
-      expect(copyList["isTransactionPending"]).toEqual(true);
+      expect(copyList["isInTransaction"]).toEqual(true);
       ledger.rollbackTransaction();
-      expect(copyList["isTransactionPending"]).toEqual(false);
+      expect(copyList["isInTransaction"]).toEqual(false);
     });
   });
 

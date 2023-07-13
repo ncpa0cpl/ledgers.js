@@ -5,6 +5,7 @@ import type { GenerateEventData } from "../events/event";
 import { Event } from "../events/event";
 import { EventList } from "../events/event-list";
 import { Ledger } from "../ledger/ledger";
+import type { TransactionInterface } from "../ledger/transaction";
 import type {
   AdditionalEventData,
   EntityChangeData,
@@ -16,35 +17,37 @@ import { extractEntityIdFromEvent } from "../utilities/extract-entity-id-from-ev
 export class Entity<E extends BaseEntity> {
   /** @internal */
   static _loadFrom<E2 extends BaseEntity>(
-    singleton: Entity<E2>,
+    entity: Entity<E2>,
     eventData: SerializedEvent[],
   ): void {
-    if (singleton.events.length > 0) {
+    if (entity.committedEvent.length > 0) {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
     const migrationController = Ledger._getMigrationController(
-      singleton.parentLedger,
+      entity.parentLedger,
     );
 
     for (const e of eventData) {
-      if (singleton.entityName !== e.metadata.entity) {
+      if (entity.entityName !== e.metadata.entity) {
         throw new LedgerError(ErrorCode.EVENT_ASSOCIATION_ERROR);
       }
 
       const event = migrationController.migrateEvent(Event._loadFrom(e));
 
-      singleton.events.add(event);
+      entity.committedEvent.add(event);
     }
-
-    singleton.events.commit();
   }
 
   /** @internal */
   static _serialize<E extends BaseEntity>(
-    singleton: Entity<E>,
+    entity: Entity<E>,
   ): SerializedEvent[] {
-    return singleton.events.serialize();
+    if (entity.isInTransaction) {
+      throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
+    }
+
+    return entity.committedEvent.serialize();
   }
 
   /** @internal */
@@ -58,29 +61,57 @@ export class Entity<E extends BaseEntity> {
   private readonly parentLedger: Ledger;
   private readonly entityName: string;
   private readonly entityConstructor: new (parent: Ledger) => E;
-  private events: EventList<E>;
+  private committedEvent: EventList<E>;
+  private stagedEvent: EventList<E> | null = null;
+  private txInterface: TransactionInterface;
 
   constructor(ledger: Ledger, entityConstructor: new (parent: Ledger) => E) {
     this.parentLedger = ledger;
     this.entityConstructor = entityConstructor;
     const tmpEntity = new entityConstructor(ledger);
     this.entityName = tmpEntity.name;
-    this.events = new EventList<E>(this.parentLedger);
+    this.committedEvent = new EventList<E>(this.parentLedger);
 
     if (!this.entityName) {
       throw new LedgerError(ErrorCode.ENTITY_NAME_NOT_SPECIFIED);
     }
 
     Ledger._getEntityController(ledger).registerSingleton(this);
+
+    this.txInterface = {
+      commit: () => this.commit(),
+      rollback: () => this.rollback(),
+    };
   }
 
-  private addToTransaction(): void {
+  /**
+   * If there are uncommitted changes on this entity, this value will be `true`.
+   */
+  get isInTransaction(): boolean {
+    return !!this.stagedEvent;
+  }
+
+  private commit() {
+    this.committedEvent = this.stagedEvent ?? this.committedEvent;
+    this.stagedEvent = null;
+  }
+
+  private rollback() {
+    this.stagedEvent = null;
+  }
+
+  private perform<R>(action: (eventList: EventList<E>) => R): R {
     const tx = Ledger._getTransaction(this.parentLedger);
 
     if (tx) {
-      tx.add(this.events);
+      if (this.stagedEvent === null) {
+        this.stagedEvent = this.committedEvent.copy();
+      }
+
+      tx.add(this.txInterface);
+      return action(this.stagedEvent);
     } else {
-      this.events.commit();
+      return action(this.committedEvent);
     }
   }
 
@@ -88,69 +119,73 @@ export class Entity<E extends BaseEntity> {
     breakpoint: string | number,
     eventMetadata?: AdditionalEventData,
   ): void {
-    if (this.events.length === 0) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
+    this.perform((eventList) => {
+      if (eventList.length === 0) {
+        throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+      }
 
-    const meta: GenerateEventData = {
-      ...eventMetadata,
-      entity: this.entityName,
-    };
+      const meta: GenerateEventData = {
+        ...eventMetadata,
+        entity: this.entityName,
+      };
 
-    const event = Event._generateBreakpointEvent<E>(
-      this.parentLedger,
-      breakpoint,
-      meta,
-    );
+      const event = Event._generateBreakpointEvent<E>(
+        this.parentLedger,
+        breakpoint,
+        meta,
+      );
 
-    this.events.add(event);
-
-    this.addToTransaction();
+      this.committedEvent.add(event);
+    });
   }
 
   create(initData: EntityData<E>, eventMetadata?: AdditionalEventData): string {
-    if (this.events.length > 0) {
-      throw new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED);
-    }
+    return this.perform((eventList) => {
+      if (eventList.length > 0) {
+        throw new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED);
+      }
 
-    const meta: GenerateEventData = {
-      ...eventMetadata,
-      entity: this.entityName,
-    };
+      const meta: GenerateEventData = {
+        ...eventMetadata,
+        entity: this.entityName,
+      };
 
-    initData.id ??= this.parentLedger.generateNextID();
+      initData.id ??= this.parentLedger.generateNextID();
 
-    const event = Event._generateCreateEvent(this.parentLedger, initData, meta);
+      const event = Event._generateCreateEvent(
+        this.parentLedger,
+        initData,
+        meta,
+      );
 
-    this.events.add(event);
+      eventList.add(event);
 
-    this.addToTransaction();
-
-    return initData.id;
+      return initData.id;
+    });
   }
 
   change(
     changes: EntityChangeData<E>,
     eventMetadata?: AdditionalEventData,
   ): void {
-    if (this.events.length === 0) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
+    this.perform((eventList) => {
+      if (eventList.length === 0) {
+        throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+      }
 
-    const meta: GenerateEventData = {
-      ...eventMetadata,
-      entity: this.entityName,
-    };
+      const meta: GenerateEventData = {
+        ...eventMetadata,
+        entity: this.entityName,
+      };
 
-    const event = Event._generateChangeEvent<E>(
-      this.parentLedger,
-      changes,
-      meta,
-    );
+      const event = Event._generateChangeEvent<E>(
+        this.parentLedger,
+        changes,
+        meta,
+      );
 
-    this.events.add(event);
-
-    this.addToTransaction();
+      eventList.add(event);
+    });
   }
 
   getName(): string {
@@ -158,36 +193,39 @@ export class Entity<E extends BaseEntity> {
   }
 
   isInitiated(): boolean {
-    return this.events.length !== 0;
+    return this.perform((eventList) => eventList.length > 0);
   }
 
   getID(): string {
-    const eventList = this.events.getAsArray();
-    const firstEvent = eventList[0];
+    return this.perform((eventList) => {
+      const firstEvent = eventList.getFirst();
 
-    if (firstEvent === undefined) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
+      if (firstEvent === undefined) {
+        throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+      }
 
-    return extractEntityIdFromEvent(firstEvent);
+      return extractEntityIdFromEvent(firstEvent);
+    });
   }
 
   get(breakpoint?: string | number): E {
-    if (this.events.length === 0) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
+    return this.perform((eventList) => {
+      if (eventList.length === 0) {
+        throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+      }
 
-    if (
-      breakpoint !== undefined &&
-      !this.events.hasCreateEventBeforeBreakpoint(breakpoint)
-    ) {
-      throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
-    }
+      if (
+        breakpoint !== undefined &&
+        !eventList.hasCreateEventBeforeBreakpoint(breakpoint)
+      ) {
+        throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
+      }
 
-    const entity = new this.entityConstructor(this.parentLedger);
+      const entity = new this.entityConstructor(this.parentLedger);
 
-    BaseEntity._applyEvents(entity, this.events.getAsArray(breakpoint));
+      BaseEntity._applyEvents(entity, eventList.getAsArray(breakpoint));
 
-    return entity;
+      return entity;
+    });
   }
 }
