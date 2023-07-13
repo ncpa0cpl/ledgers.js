@@ -83,8 +83,6 @@ describe("migrations", () => {
     const ledger1 = new LedgerV1();
     const ledger1Serialized = ledger1.serialize();
 
-    ledger1Serialized.singletonEntities[""];
-
     expect(ledger1Serialized).toMatchObject({
       singletonEntities: expect.objectContaining({
         FooEntity: [
@@ -176,6 +174,19 @@ describe("migrations", () => {
     expect(ledger3from1Serialized).toMatchObject(expected);
     expect(ledger3from2Serialized).toMatchObject(expected);
 
-    expect(ledger3from1.getSnapshot()).toMatchSnapshot();
+    expect(ledger3from1.getSnapshot()).toMatchObject({
+      copies: {},
+      listEntities: {},
+      singletonEntities: {
+        FooEntity: {
+          a: "Num(12)",
+          b: "12",
+          name: "FooEntity",
+          createdAt: expect.any(Number),
+          updatedAt: expect.any(Number),
+          id: expect.any(String),
+        },
+      },
+    });
   });
 });
