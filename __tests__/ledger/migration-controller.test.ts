@@ -1,11 +1,11 @@
-import { EntitySingleton } from "../../src/entity-containers/entity-singleton";
-import { Entity } from "../../src/entity/entity";
+import { Entity } from "../../src/entity-containers/entity";
+import { BaseEntity } from "../../src/entity/base-entity";
 import { Ledger } from "../../src/ledger/ledger";
 import { EventType, MigrationInterface } from "../../src/types";
 
 describe("migrations", () => {
   it("should apply migrations", () => {
-    class FooEntityV1 extends Entity {
+    class FooEntityV1 extends BaseEntity {
       name = "FooEntity";
 
       a: number;
@@ -19,7 +19,7 @@ describe("migrations", () => {
       static version = 1;
       name = "Ledger";
 
-      foo = new EntitySingleton(this, FooEntityV1);
+      foo = new Entity(this, FooEntityV1);
 
       constructor() {
         super();
@@ -27,7 +27,7 @@ describe("migrations", () => {
       }
     }
 
-    class FooEntityV2 extends Entity {
+    class FooEntityV2 extends BaseEntity {
       name = "FooEntity";
 
       a: number;
@@ -38,10 +38,10 @@ describe("migrations", () => {
       static version = 2;
       name = "Ledger";
 
-      foo = new EntitySingleton(this, FooEntityV2);
+      foo = new Entity(this, FooEntityV2);
     }
 
-    class FooEntityV3 extends Entity {
+    class FooEntityV3 extends BaseEntity {
       name = "FooEntity";
 
       a: string;
@@ -52,7 +52,7 @@ describe("migrations", () => {
       static version = 3;
       name = "Ledger";
 
-      foo = new EntitySingleton(this, FooEntityV3);
+      foo = new Entity(this, FooEntityV3);
     }
 
     const migration1to2: MigrationInterface<FooEntityV1, FooEntityV2> = {

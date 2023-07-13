@@ -1,4 +1,4 @@
-import type { Entity } from "./entity/entity";
+import type { BaseEntity } from "./entity/base-entity";
 import type { DeepPartial, ReadonlyKeys, Serial } from "./type-utils";
 
 export type EntityData<T extends object> = Omit<
@@ -79,7 +79,7 @@ export enum EntityReferenceType {
   COPY = "COPY",
 }
 
-export type Reference<E extends Entity | Copy> = {
+export type Reference<E extends BaseEntity | Copy> = {
   ledgerName: string;
   name: string;
   type: EntityReferenceType;

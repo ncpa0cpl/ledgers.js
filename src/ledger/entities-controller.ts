@@ -1,7 +1,7 @@
-import { CopyList } from "../entity-containers/copy-list";
+import { CopiesList } from "../entity-containers/copy-list";
+import { Entity } from "../entity-containers/entity";
 import { EntityList } from "../entity-containers/entity-list";
-import { EntitySingleton } from "../entity-containers/entity-singleton";
-import type { Entity } from "../entity/entity";
+import type { BaseEntity } from "../entity/base-entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type {
@@ -22,9 +22,9 @@ export class EntitiesController {
     return [...controller.lists.values()];
   }
 
-  private singletons = new Map<string, EntitySingleton<Entity>>();
-  private lists = new Map<string, EntityList<Entity>>();
-  private copies = new Map<string, CopyList<Copy>>();
+  private singletons = new Map<string, Entity<BaseEntity>>();
+  private lists = new Map<string, EntityList<BaseEntity>>();
+  private copies = new Map<string, CopiesList<Copy>>();
 
   private loadIntoSingleton(name: string, data: SerializedEvent[]): void {
     if (!this.singletons.has(name)) {
@@ -32,7 +32,7 @@ export class EntitiesController {
     }
 
     const singleton = this.singletons.get(name)!;
-    EntitySingleton._loadFrom(singleton, data);
+    Entity._loadFrom(singleton, data);
   }
 
   private loadIntoList(name: string, data: SerializedEntityListEvents): void {
@@ -50,10 +50,10 @@ export class EntitiesController {
     }
 
     const copies = this.copies.get(name)!;
-    CopyList._loadFrom(copies, data);
+    CopiesList._loadFrom(copies, data);
   }
 
-  registerSingleton(s: EntitySingleton<any>): void {
+  registerSingleton(s: Entity<any>): void {
     if (this.singletons.has(s.getName())) {
       throw new LedgerError(ErrorCode.DUPLICATE_ENTITY);
     }
@@ -69,7 +69,7 @@ export class EntitiesController {
     this.lists.set(s.getName(), s);
   }
 
-  registerCopyList(l: CopyList<Copy>, name: string): void {
+  registerCopyList(l: CopiesList<Copy>, name: string): void {
     if (this.copies.has(name)) {
       throw new LedgerError(ErrorCode.DUPLICATE_ENTITY);
     }
@@ -77,17 +77,17 @@ export class EntitiesController {
     this.copies.set(name, l);
   }
 
-  getSingletonByName<E extends Entity>(name: string): EntitySingleton<E> {
+  getSingletonByName<E extends BaseEntity>(name: string): Entity<E> {
     const s = this.singletons.get(name);
 
     if (!s) {
       throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
-    return s as EntitySingleton<E>;
+    return s as Entity<E>;
   }
 
-  getListByName<E extends Entity>(name: string): EntityList<E> {
+  getListByName<E extends BaseEntity>(name: string): EntityList<E> {
     const l = this.lists.get(name);
 
     if (!l) {
@@ -97,17 +97,17 @@ export class EntitiesController {
     return l as EntityList<E>;
   }
 
-  getCopiesByName<C extends Copy>(name: string): CopyList<C> {
+  getCopiesByName<C extends Copy>(name: string): CopiesList<C> {
     const c = this.copies.get(name);
 
     if (!c) {
       throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }
 
-    return c as CopyList<C>;
+    return c as CopiesList<C>;
   }
 
-  findSingletonEntity<E extends Entity>(id: string): E | undefined {
+  findSingletonEntity<E extends BaseEntity>(id: string): E | undefined {
     if (!id) return undefined;
 
     for (const s of this.singletons.values()) {
@@ -119,7 +119,7 @@ export class EntitiesController {
     return undefined;
   }
 
-  findListEntity<E extends Entity>(id: string): E | undefined {
+  findListEntity<E extends BaseEntity>(id: string): E | undefined {
     if (!id) return undefined;
 
     for (const l of this.lists.values()) {
@@ -188,7 +188,7 @@ export class EntitiesController {
 
     for (const [name, singleton] of this.singletons) {
       Object.assign(serialized.singletonEntities, {
-        [name]: EntitySingleton._serialize(singleton),
+        [name]: Entity._serialize(singleton),
       });
     }
 
@@ -199,7 +199,9 @@ export class EntitiesController {
     }
 
     for (const [name, copies] of this.copies) {
-      Object.assign(serialized.copies, { [name]: CopyList._serialize(copies) });
+      Object.assign(serialized.copies, {
+        [name]: CopiesList._serialize(copies),
+      });
     }
 
     return serialized;

@@ -4,9 +4,9 @@ import { Ledger } from "../ledger/ledger";
 import type { TransactionInterface } from "../ledger/transaction";
 import type { Copy } from "../types";
 
-export class CopyList<C extends Copy> {
+export class CopiesList<C extends Copy> {
   /** @internal */
-  static _loadFrom<D extends Copy>(copyList: CopyList<any>, copies: D[]) {
+  static _loadFrom<D extends Copy>(copyList: CopiesList<any>, copies: D[]) {
     if (copyList.committed.size > 0) {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
@@ -17,7 +17,7 @@ export class CopyList<C extends Copy> {
   }
 
   /** @internal */
-  static _serialize<C extends Copy>(list: CopyList<C>): C[] {
+  static _serialize<C extends Copy>(list: CopiesList<C>): C[] {
     if (list.isTransactionPending) {
       throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
     }

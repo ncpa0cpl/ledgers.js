@@ -1,4 +1,4 @@
-import { Entity } from "../entity/entity";
+import { BaseEntity } from "../entity/base-entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type { GenerateEventData } from "../events/event";
@@ -13,10 +13,10 @@ import type {
 } from "../types";
 import { extractEntityIdFromEvent } from "../utilities/extract-entity-id-from-event";
 
-export class EntitySingleton<E extends Entity> {
+export class Entity<E extends BaseEntity> {
   /** @internal */
-  static _loadFrom<E2 extends Entity>(
-    singleton: EntitySingleton<E2>,
+  static _loadFrom<E2 extends BaseEntity>(
+    singleton: Entity<E2>,
     eventData: SerializedEvent[],
   ): void {
     if (singleton.events.length > 0) {
@@ -41,15 +41,15 @@ export class EntitySingleton<E extends Entity> {
   }
 
   /** @internal */
-  static _serialize<E extends Entity>(
-    singleton: EntitySingleton<E>,
+  static _serialize<E extends BaseEntity>(
+    singleton: Entity<E>,
   ): SerializedEvent[] {
     return singleton.events.serialize();
   }
 
   /** @internal */
-  static _addBreakpointEvent<E extends Entity>(
-    entity: EntitySingleton<E>,
+  static _addBreakpointEvent<E extends BaseEntity>(
+    entity: Entity<E>,
     breakpoint: string | number,
   ): void {
     return entity.eventBreakpoint(breakpoint);
@@ -186,7 +186,7 @@ export class EntitySingleton<E extends Entity> {
 
     const entity = new this.entityConstructor(this.parentLedger);
 
-    Entity._applyEvents(entity, this.events.getAsArray(breakpoint));
+    BaseEntity._applyEvents(entity, this.events.getAsArray(breakpoint));
 
     return entity;
   }

@@ -1,5 +1,5 @@
 import * as uuid from "uuid";
-import type { Entity } from "../entity/entity";
+import type { BaseEntity } from "../entity/base-entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type {
@@ -95,7 +95,7 @@ export abstract class Ledger {
     return Date.now();
   }
 
-  createReference<T extends Entity | Copy>(entity: T): Reference<T> {
+  createReference<T extends BaseEntity | Copy>(entity: T): Reference<T> {
     let type: EntityReferenceType = EntityReferenceType.SINGLETON;
     const isSingleton = !!this.entities.findSingletonEntity(entity.id);
 
@@ -118,7 +118,7 @@ export abstract class Ledger {
     if (type === EntityReferenceType.COPY) {
       name = this.entities.getCopyName(entity.id);
     } else {
-      name = (entity as Entity).name;
+      name = (entity as BaseEntity).name;
     }
 
     return {
@@ -129,7 +129,7 @@ export abstract class Ledger {
     };
   }
 
-  resolveReference<T extends Entity | Copy>(ref: Reference<T>): T {
+  resolveReference<T extends BaseEntity | Copy>(ref: Reference<T>): T {
     if (ref.ledgerName !== this.name) {
       throw new LedgerError(ErrorCode.LEDGER_NAMES_DO_NOT_MATCH);
     }

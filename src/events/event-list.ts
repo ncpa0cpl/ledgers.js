@@ -1,4 +1,4 @@
-import type { Entity } from "../entity/entity";
+import type { BaseEntity } from "../entity/base-entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import { Ledger } from "../ledger/ledger";
@@ -6,7 +6,7 @@ import type { SerializedEvent } from "../types";
 import { EventType } from "../types";
 import type { Event } from "./event";
 
-export class EventList<E extends Entity> {
+export class EventList<E extends BaseEntity> {
   private committed: Event<E>[] = [];
   private staged: Event<E>[] = [];
 

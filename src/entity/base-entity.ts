@@ -2,7 +2,7 @@ import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type { Event } from "../events/event";
 
-export abstract class Entity {
+export abstract class BaseEntity {
   abstract readonly name: string;
   readonly id!: string;
 
@@ -10,7 +10,10 @@ export abstract class Entity {
   updatedAt!: number;
 
   /** @internal */
-  static _applyEvents<T extends Entity>(entity: T, events: Event<T>[]): void {
+  static _applyEvents<T extends BaseEntity>(
+    entity: T,
+    events: Event<T>[],
+  ): void {
     if (events.length === 0) {
       throw new LedgerError(ErrorCode.EMPTY_EVENTS_LIST);
     }

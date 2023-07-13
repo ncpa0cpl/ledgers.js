@@ -1,4 +1,4 @@
-import { Entity } from "../entity/entity";
+import { BaseEntity } from "../entity/base-entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
 import type { GenerateEventData } from "../events/event";
@@ -13,9 +13,9 @@ import type {
   SerializedEvent,
 } from "../types";
 
-export class EntityList<E extends Entity> {
+export class EntityList<E extends BaseEntity> {
   /** @internal */
-  static _loadFrom<E2 extends Entity>(
+  static _loadFrom<E2 extends BaseEntity>(
     list: EntityList<E2>,
     eventData: SerializedEntityListEvents,
   ): void {
@@ -47,7 +47,7 @@ export class EntityList<E extends Entity> {
   }
 
   /** @internal */
-  static _serialize<E extends Entity>(
+  static _serialize<E extends BaseEntity>(
     list: EntityList<E>,
   ): SerializedEntityListEvents {
     for (const [, eventList] of list.entitiesEvents) {
@@ -62,7 +62,7 @@ export class EntityList<E extends Entity> {
   }
 
   /** @internal */
-  static _addBreakpointEvent<E extends Entity>(
+  static _addBreakpointEvent<E extends BaseEntity>(
     list: EntityList<E>,
     breakpoint: string | number,
   ): void {
@@ -120,7 +120,7 @@ export class EntityList<E extends Entity> {
 
     const entity = new this.entityConstructor(this.parentLedger);
 
-    Entity._applyEvents(entity, events.getAsArray(breakpoint));
+    BaseEntity._applyEvents(entity, events.getAsArray(breakpoint));
 
     return entity;
   }
