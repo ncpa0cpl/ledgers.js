@@ -107,7 +107,7 @@ export class EntitiesController {
     return c as CopiesList<C>;
   }
 
-  findSingletonEntity<E extends BaseEntity>(id: string): E | undefined {
+  findEntity<E extends BaseEntity>(id: string): E | undefined {
     if (!id) return undefined;
 
     for (const s of this.singletons.values()) {
@@ -155,20 +155,20 @@ export class EntitiesController {
 
   getSnapshot(breakpoint?: string | number): object {
     const snapshot = {
-      singletonEntities: {},
+      entities: {},
       listEntities: {},
       copies: {},
     };
 
-    for (const [name, singleton] of this.singletons) {
-      Object.assign(snapshot.singletonEntities, {
-        [name]: singleton.get(breakpoint),
+    for (const [name, entity] of this.singletons) {
+      Object.assign(snapshot.entities, {
+        [name]: entity.get(breakpoint),
       });
     }
 
-    for (const [name, singleton] of this.lists) {
+    for (const [name, entities] of this.lists) {
       Object.assign(snapshot.listEntities, {
-        [name]: singleton.getAll(breakpoint),
+        [name]: entities.getAll(breakpoint),
       });
     }
 
@@ -181,13 +181,13 @@ export class EntitiesController {
 
   serialize(): SerializedEntities {
     const serialized: SerializedEntities = {
-      singletonEntities: {},
+      entities: {},
       listEntities: {},
       copies: {},
     };
 
     for (const [name, singleton] of this.singletons) {
-      Object.assign(serialized.singletonEntities, {
+      Object.assign(serialized.entities, {
         [name]: Entity._serialize(singleton),
       });
     }
@@ -208,8 +208,8 @@ export class EntitiesController {
   }
 
   loadFrom(data: SerializedEntities): void {
-    for (const [name, singleton] of Object.entries(data.singletonEntities)) {
-      this.loadIntoSingleton(name, singleton);
+    for (const [name, entity] of Object.entries(data.entities)) {
+      this.loadIntoSingleton(name, entity);
     }
 
     for (const [name, list] of Object.entries(data.listEntities)) {

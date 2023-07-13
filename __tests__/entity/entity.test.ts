@@ -1,9 +1,9 @@
-import { Entity } from "../../src";
+import { BaseEntity } from "../../src";
 import { ErrorCode } from "../../src/errors/error-codes";
 import { LedgerError } from "../../src/errors/ledger-error";
 import { eventMock } from "../helpers";
 
-class TestEntity extends Entity {
+class TestEntity extends BaseEntity {
   name = "TestEntity";
 }
 
@@ -16,8 +16,8 @@ describe("Entity", () => {
     });
 
     it("should throw an error if the event list is empty", () => {
-      expect(() => Entity._applyEvents(entity, [])).toThrowError(
-        new LedgerError(ErrorCode.EMPTY_EVENTS_LIST)
+      expect(() => BaseEntity._applyEvents(entity, [])).toThrowError(
+        new LedgerError(ErrorCode.EMPTY_EVENTS_LIST),
       );
     });
 
@@ -28,7 +28,7 @@ describe("Entity", () => {
         eventMock({ apply: jest.fn() }),
       ];
 
-      Entity._applyEvents(entity, evMocks);
+      BaseEntity._applyEvents(entity, evMocks);
 
       expect(evMocks[0]?.apply).toHaveBeenCalledTimes(1);
       expect(evMocks[0]?.apply).toHaveBeenLastCalledWith(entity);
@@ -43,7 +43,7 @@ describe("Entity", () => {
     it("should correctly assign the timestamps if there is exactly one event", () => {
       const evMocks = [eventMock({ timestamp: 1234 })];
 
-      Entity._applyEvents(entity, evMocks);
+      BaseEntity._applyEvents(entity, evMocks);
 
       expect(entity.createdAt).toEqual(1234);
       expect(entity.updatedAt).toEqual(1234);
@@ -55,7 +55,7 @@ describe("Entity", () => {
         eventMock({ timestamp: 5678 }),
       ];
 
-      Entity._applyEvents(entity, evMocks);
+      BaseEntity._applyEvents(entity, evMocks);
 
       expect(entity.createdAt).toEqual(1234);
       expect(entity.updatedAt).toEqual(5678);
@@ -68,7 +68,7 @@ describe("Entity", () => {
         eventMock({ timestamp: 9102 }),
       ];
 
-      Entity._applyEvents(entity, evMocks);
+      BaseEntity._applyEvents(entity, evMocks);
 
       expect(entity.createdAt).toEqual(1234);
       expect(entity.updatedAt).toEqual(9102);
@@ -82,7 +82,7 @@ describe("Entity", () => {
         eventMock({ timestamp: 5555 }),
       ];
 
-      Entity._applyEvents(entity, evMocks);
+      BaseEntity._applyEvents(entity, evMocks);
 
       expect(entity.createdAt).toEqual(1234);
       expect(entity.updatedAt).toEqual(5555);

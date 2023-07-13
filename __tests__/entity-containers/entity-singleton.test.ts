@@ -1,4 +1,4 @@
-import { Entity, EntitySingleton, Ledger } from "../../src";
+import { BaseEntity, Entity, Ledger } from "../../src";
 import { ErrorCode } from "../../src/errors/error-codes";
 import { LedgerError } from "../../src/errors/ledger-error";
 import { generateNextTestTimestamp } from "../helpers";
@@ -17,7 +17,7 @@ class TestLedger extends Ledger {
     return generateNextTestTimestamp();
   }
 }
-class TestSingleton extends Entity {
+class TestSingleton extends BaseEntity {
   name = "TestSingleton";
   prop!: string;
 }
@@ -31,7 +31,7 @@ describe("EntitySingleton", () => {
 
   describe(".eventCreate()", () => {
     it("should add the first create event", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       setNextTimestampTo = 1234567;
       singleton.create({ prop: "foo" });
@@ -46,16 +46,16 @@ describe("EntitySingleton", () => {
     });
 
     it("should throw an error when dispatching a create event to already initialized singleton", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
       singleton.create({ prop: "foo" });
 
       expect(() => singleton.create({ prop: "foo" })).toThrowError(
-        new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED)
+        new LedgerError(ErrorCode.ENTITY_ALREADY_CREATED),
       );
     });
 
     it("should immediately commit the event if no transaction is started", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       singleton.create({ prop: "foo" });
 
@@ -64,7 +64,7 @@ describe("EntitySingleton", () => {
     });
 
     it("should not commit the event if a transaction is started", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       ledger.startTransaction();
       singleton.create({ prop: "foo" });
@@ -75,12 +75,12 @@ describe("EntitySingleton", () => {
       expect(singleton.isInitiated()).toEqual(false);
 
       expect(() => singleton.get()).toThrowError(
-        new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED)
+        new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED),
       );
     });
 
     it("should use the provided ID if specified", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       singleton.create({ id: "123", prop: "foo" });
 
@@ -90,7 +90,7 @@ describe("EntitySingleton", () => {
 
   describe(".eventChange()", () => {
     it("should add the change event", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       setNextTimestampTo = 5555555;
       singleton.create({ prop: "foo" });
@@ -116,15 +116,15 @@ describe("EntitySingleton", () => {
     });
 
     it("should throw an error when dispatching a change event to a non-initialized singleton", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       expect(() => singleton.change({ prop: "bar" })).toThrowError(
-        new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED)
+        new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED),
       );
     });
 
     it("should immediately commit the event if no transaction is started", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       singleton.create({ prop: "foo" });
       singleton.change({ prop: "bar" });
@@ -133,7 +133,7 @@ describe("EntitySingleton", () => {
     });
 
     it("should not commit the event if a transaction is started", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
       singleton.create({ prop: "foo" });
 
       ledger.startTransaction();
@@ -148,7 +148,7 @@ describe("EntitySingleton", () => {
 
   describe(".getName()", () => {
     it("should return the name specified in the entity class", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       expect(singleton.getName()).toEqual("TestSingleton");
     });
@@ -156,15 +156,15 @@ describe("EntitySingleton", () => {
 
   describe(".getID()", () => {
     it("should throw an error if not initiated", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       expect(() => singleton.getID()).toThrowError(
-        new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED)
+        new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED),
       );
     });
 
     it("should correctly return the entity id", () => {
-      const singleton = new EntitySingleton(ledger, TestSingleton);
+      const singleton = new Entity(ledger, TestSingleton);
 
       singleton.create({ id: "123", prop: "foo" });
 

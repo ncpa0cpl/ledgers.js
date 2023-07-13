@@ -1,4 +1,4 @@
-import { CopyList, Ledger } from "../../src";
+import { CopiesList, Ledger } from "../../src";
 
 type TestCopy = {
   id: string;
@@ -18,18 +18,18 @@ describe("CopyList", () => {
 
   describe(".has()", () => {
     it("should return false if the copy has never been saved to the list", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       expect(copyList.has("1")).toEqual(false);
     });
 
     it("should return true if the copy has been saved to the list", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       copyList.put({ id: "1", label: "foo" });
       expect(copyList.has("1")).toEqual(true);
     });
 
     it("should return true if the copy has been saved to the list during transaction, before commit", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
       expect(copyList.has("1")).toEqual(true);
@@ -37,7 +37,7 @@ describe("CopyList", () => {
     });
 
     it("should return true if the copy has been saved to the list during transaction, before commit", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
       ledger.commitTransaction();
@@ -45,7 +45,7 @@ describe("CopyList", () => {
     });
 
     it("should return false if the copy has been saved to the list during transaction, after rollback", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
       ledger.rollbackTransaction();
@@ -55,13 +55,13 @@ describe("CopyList", () => {
 
   describe(".put()", () => {
     it("should insert the copy into the list", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       copyList.put({ id: "1", label: "foo" });
       expect(copyList.get("1")).toEqual({ id: "1", label: "foo" });
     });
 
     it("should update the copy in the list", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       copyList.put({ id: "1", label: "foo" });
       expect(copyList.get("1")).toEqual({ id: "1", label: "foo" });
       copyList.put({ id: "1", label: "bar" });
@@ -69,13 +69,13 @@ describe("CopyList", () => {
     });
 
     it("should immediately commit the change when there is no transaction started", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       copyList.put({ id: "1", label: "foo" });
       expect(copyList["isTransactionPending"]).toEqual(false);
     });
 
     it("should not commit the changes during transaction until the commit", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
       expect(copyList["isTransactionPending"]).toEqual(true);
@@ -84,7 +84,7 @@ describe("CopyList", () => {
     });
 
     it("should not commit the changes during transaction until the rollback", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       ledger.startTransaction();
       copyList.put({ id: "1", label: "foo" });
       expect(copyList["isTransactionPending"]).toEqual(true);
@@ -95,7 +95,7 @@ describe("CopyList", () => {
 
   describe(".getAll()", () => {
     it("should always retrieve all the saved copies", () => {
-      const copyList = new CopyList<TestCopy>(ledger, "TestCopy");
+      const copyList = new CopiesList<TestCopy>(ledger, "TestCopy");
       copyList.put({ id: "1", label: "foo" });
       expect(copyList.getAll()).toEqual([{ id: "1", label: "foo" }]);
       copyList.put({ id: "2", label: "bar" });

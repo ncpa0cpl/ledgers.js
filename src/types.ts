@@ -52,7 +52,7 @@ export type SerializedBreakpoints = {
 };
 
 export type SerializedEntities = {
-  singletonEntities: Record<string, SerializedEvent[]>;
+  entities: Record<string, SerializedEvent[]>;
   listEntities: Record<string, SerializedEntityListEvents>;
   copies: Record<string, Copy[]>;
 };

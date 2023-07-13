@@ -84,7 +84,7 @@ describe("migrations", () => {
     const ledger1Serialized = ledger1.serialize();
 
     expect(ledger1Serialized).toMatchObject({
-      singletonEntities: expect.objectContaining({
+      entities: expect.objectContaining({
         FooEntity: [
           expect.objectContaining({
             metadata: expect.objectContaining({
@@ -110,7 +110,7 @@ describe("migrations", () => {
     const ledger2Serialized = ledger2.serialize();
 
     expect(ledger2Serialized).toMatchObject({
-      singletonEntities: expect.objectContaining({
+      entities: expect.objectContaining({
         FooEntity: [
           expect.objectContaining({
             metadata: expect.objectContaining({
@@ -144,7 +144,7 @@ describe("migrations", () => {
     const ledger3from2Serialized = ledger3from2.serialize();
 
     const expected = {
-      singletonEntities: expect.objectContaining({
+      entities: expect.objectContaining({
         FooEntity: [
           expect.objectContaining({
             metadata: expect.objectContaining({
@@ -177,7 +177,7 @@ describe("migrations", () => {
     expect(ledger3from1.getSnapshot()).toMatchObject({
       copies: {},
       listEntities: {},
-      singletonEntities: {
+      entities: {
         FooEntity: {
           a: "Num(12)",
           b: "12",

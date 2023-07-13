@@ -2,6 +2,7 @@ import * as uuid from "uuid";
 import type { BaseEntity } from "../entity/base-entity";
 import { ErrorCode } from "../errors/error-codes";
 import { LedgerError } from "../errors/ledger-error";
+import type { SnapshotOf } from "../type-utils";
 import type {
   Copy,
   MigrationInterface,
@@ -97,7 +98,7 @@ export abstract class Ledger {
 
   createReference<T extends BaseEntity | Copy>(entity: T): Reference<T> {
     let type: EntityReferenceType = EntityReferenceType.SINGLETON;
-    const isSingleton = !!this.entities.findSingletonEntity(entity.id);
+    const isSingleton = !!this.entities.findEntity(entity.id);
 
     if (!isSingleton) {
       type = EntityReferenceType.LIST;
@@ -221,8 +222,11 @@ export abstract class Ledger {
     };
   }
 
-  getSnapshot(breakpoint?: string | number): object {
-    return { ...this.entities.getSnapshot(breakpoint) };
+  getSnapshot<T extends Ledger>(
+    this: T,
+    breakpoint?: string | number,
+  ): SnapshotOf<T> {
+    return this.entities.getSnapshot(breakpoint) as any;
   }
 
   getHistory(): Array<{

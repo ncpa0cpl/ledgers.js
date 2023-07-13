@@ -4,7 +4,7 @@ import { Ledger } from "../ledger/ledger";
 import type { TransactionInterface } from "../ledger/transaction";
 import type { Copy } from "../types";
 
-export class CopiesList<C extends Copy> {
+export class CopiesList<C extends Copy, Name extends string = string> {
   /** @internal */
   static _loadFrom<D extends Copy>(copyList: CopiesList<any>, copies: D[]) {
     if (copyList.committed.size > 0) {
@@ -31,7 +31,7 @@ export class CopiesList<C extends Copy> {
   private staged = new Map<string, C>();
   private txInterface: TransactionInterface;
 
-  constructor(parentLedger: Ledger, name: string) {
+  constructor(parentLedger: Ledger, name: Name) {
     this.parentLedger = parentLedger;
     this.name = name;
 
