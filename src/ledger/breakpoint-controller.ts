@@ -66,7 +66,7 @@ export class BreakpointController {
 
   getEventsUntilBreakpoint<E extends object>(
     breakpoint: string | number,
-    events: Array<Event<E>>
+    events: Array<Event<E>>,
   ): Array<Event<E>> {
     this.ensureBreakpointExist(breakpoint);
 

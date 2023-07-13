@@ -35,10 +35,7 @@ export class EntitiesController {
     EntitySingleton._loadFrom(singleton, data);
   }
 
-  private loadIntoList(
-    name: string,
-    data: SerializedEntityListEvents<any>
-  ): void {
+  private loadIntoList(name: string, data: SerializedEntityListEvents): void {
     if (!this.lists.has(name)) {
       throw new LedgerError(ErrorCode.UNKNOWN_ENTITY_NAME);
     }

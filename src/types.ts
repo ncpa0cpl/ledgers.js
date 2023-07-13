@@ -42,10 +42,7 @@ export type PrivateEventMetadata = EventMetadata & {
   appliedMigrations?: string[];
 };
 
-export type SerializedEntityListEvents<T extends object> = [
-  string,
-  SerializedEvent[]
-][];
+export type SerializedEntityListEvents = [string, SerializedEvent[]][];
 
 export type SerializedBreakpoints = {
   ledgerBreakpoints: Array<{
@@ -56,7 +53,7 @@ export type SerializedBreakpoints = {
 
 export type SerializedEntities = {
   singletonEntities: Record<string, SerializedEvent[]>;
-  listEntities: Record<string, SerializedEntityListEvents<any>>;
+  listEntities: Record<string, SerializedEntityListEvents>;
   copies: Record<string, Copy[]>;
 };
 
@@ -96,6 +93,6 @@ export interface MigrationInterface<B extends object, A extends object> {
   migrateCreateEvent?: (eventData: B, meta: AdditionalEventData) => A;
   migrateChangeEvent?: (
     eventData: Partial<B>,
-    meta: AdditionalEventData
+    meta: AdditionalEventData,
   ) => Partial<A>;
 }

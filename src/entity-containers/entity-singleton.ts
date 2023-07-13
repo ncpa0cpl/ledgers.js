@@ -17,14 +17,14 @@ export class EntitySingleton<E extends Entity> {
   /** @internal */
   static _loadFrom<E2 extends Entity>(
     singleton: EntitySingleton<E2>,
-    eventData: SerializedEvent[]
+    eventData: SerializedEvent[],
   ): void {
     if (singleton.events.length > 0) {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
     const migrationController = Ledger._getMigrationController(
-      singleton.parentLedger
+      singleton.parentLedger,
     );
 
     for (const e of eventData) {
@@ -42,7 +42,7 @@ export class EntitySingleton<E extends Entity> {
 
   /** @internal */
   static _serialize<E extends Entity>(
-    singleton: EntitySingleton<E>
+    singleton: EntitySingleton<E>,
   ): SerializedEvent[] {
     return singleton.events.serialize();
   }
@@ -50,7 +50,7 @@ export class EntitySingleton<E extends Entity> {
   /** @internal */
   static _addBreakpointEvent<E extends Entity>(
     entity: EntitySingleton<E>,
-    breakpoint: string | number
+    breakpoint: string | number,
   ): void {
     return entity.eventBreakpoint(breakpoint);
   }
@@ -86,7 +86,7 @@ export class EntitySingleton<E extends Entity> {
 
   private eventBreakpoint(
     breakpoint: string | number,
-    eventMetadata?: AdditionalEventData
+    eventMetadata?: AdditionalEventData,
   ): void {
     if (this.events.length === 0) {
       throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
@@ -100,7 +100,7 @@ export class EntitySingleton<E extends Entity> {
     const event = Event._generateBreakpointEvent<E>(
       this.parentLedger,
       breakpoint,
-      meta
+      meta,
     );
 
     this.events.add(event);
@@ -131,7 +131,7 @@ export class EntitySingleton<E extends Entity> {
 
   change(
     changes: EntityChangeData<E>,
-    eventMetadata?: AdditionalEventData
+    eventMetadata?: AdditionalEventData,
   ): void {
     if (this.events.length === 0) {
       throw new LedgerError(ErrorCode.ENTITY_NOT_YET_CREATED);
@@ -145,7 +145,7 @@ export class EntitySingleton<E extends Entity> {
     const event = Event._generateChangeEvent<E>(
       this.parentLedger,
       changes,
-      meta
+      meta,
     );
 
     this.events.add(event);

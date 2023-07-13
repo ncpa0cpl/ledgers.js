@@ -17,14 +17,14 @@ export class EntityList<E extends Entity> {
   /** @internal */
   static _loadFrom<E2 extends Entity>(
     list: EntityList<E2>,
-    eventData: SerializedEntityListEvents<any>
+    eventData: SerializedEntityListEvents,
   ): void {
     if (list.entitiesEvents.size > 0) {
       throw new LedgerError(ErrorCode.DESERIALIZING_ON_NON_EMPTY_LEDGER);
     }
 
     const migrationController = Ledger._getMigrationController(
-      list.parentLedger
+      list.parentLedger,
     );
 
     for (const [id, events] of eventData) {
@@ -48,8 +48,8 @@ export class EntityList<E extends Entity> {
 
   /** @internal */
   static _serialize<E extends Entity>(
-    list: EntityList<E>
-  ): SerializedEntityListEvents<E> {
+    list: EntityList<E>,
+  ): SerializedEntityListEvents {
     for (const [, eventList] of list.entitiesEvents) {
       if (eventList.isTransactionPending) {
         throw new LedgerError(ErrorCode.SERIALIZING_DURING_TRANSACTION);
@@ -57,14 +57,14 @@ export class EntityList<E extends Entity> {
     }
 
     return [...list.entitiesEvents.entries()].map(
-      ([id, events]): [string, SerializedEvent[]] => [id, events.serialize()]
+      ([id, events]): [string, SerializedEvent[]] => [id, events.serialize()],
     );
   }
 
   /** @internal */
   static _addBreakpointEvent<E extends Entity>(
     list: EntityList<E>,
-    breakpoint: string | number
+    breakpoint: string | number,
   ): void {
     return list.eventBreakpoint(breakpoint);
   }
@@ -112,7 +112,7 @@ export class EntityList<E extends Entity> {
 
   private createEntityFromEvents(
     events: EventList<E>,
-    breakpoint?: string | number
+    breakpoint?: string | number,
   ): E {
     if (events.length === 0) {
       throw new LedgerError(ErrorCode.EMPTY_EVENTS_LIST);
@@ -127,7 +127,7 @@ export class EntityList<E extends Entity> {
 
   private eventBreakpoint(
     breakpoint: string | number,
-    eventMetadata?: AdditionalEventData
+    eventMetadata?: AdditionalEventData,
   ): void {
     const meta: GenerateEventData = {
       ...eventMetadata,
@@ -138,7 +138,7 @@ export class EntityList<E extends Entity> {
       const event = Event._generateBreakpointEvent<E>(
         this.parentLedger,
         breakpoint,
-        meta
+        meta,
       );
 
       eventList.add(event);
@@ -159,14 +159,14 @@ export class EntityList<E extends Entity> {
     };
 
     const previousBreakpoints = Ledger._getBreakpointController(
-      this.parentLedger
+      this.parentLedger,
     ).getBreakpoints();
 
     const eventList = new EventList<E>(this.parentLedger);
 
     for (const breakpoint of previousBreakpoints) {
       eventList.add(
-        Event._generateBreakpointEvent<E>(this.parentLedger, breakpoint, meta)
+        Event._generateBreakpointEvent<E>(this.parentLedger, breakpoint, meta),
       );
     }
 
@@ -184,7 +184,7 @@ export class EntityList<E extends Entity> {
   change(
     id: string,
     changes: EntityChangeData<E>,
-    eventMetadata?: AdditionalEventData
+    eventMetadata?: AdditionalEventData,
   ): void {
     const eventList = this.entitiesEvents.get(id);
 
@@ -200,7 +200,7 @@ export class EntityList<E extends Entity> {
     const event = Event._generateChangeEvent<E>(
       this.parentLedger,
       changes,
-      meta
+      meta,
     );
 
     eventList.add(event);

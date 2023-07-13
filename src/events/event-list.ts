@@ -48,7 +48,7 @@ export class EventList<E extends Entity> {
 
     if (breakpoint !== undefined) {
       return Ledger._getBreakpointController(
-        this.ledger
+        this.ledger,
       ).getEventsUntilBreakpoint(breakpoint, events);
     }
 

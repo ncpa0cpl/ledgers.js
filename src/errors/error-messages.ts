@@ -2,9 +2,9 @@ import { ErrorCode } from "./error-codes";
 
 const createErrorMessageMap = <
   S extends string,
-  R extends Record<ErrorCode, S>
+  R extends Record<ErrorCode, S>,
 >(
-  v: R
+  v: R,
 ) => v;
 
 export const ErrorMessage = createErrorMessageMap({

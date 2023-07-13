@@ -40,7 +40,7 @@ export class Event<T extends object> {
     const event = new Event<U>({ id: serialized.id }, serialized.metadata);
 
     event.instructions = serialized.instructions.map((i) =>
-      PropertyChangeInstruction._loadFrom(i)
+      PropertyChangeInstruction._loadFrom(i),
     );
 
     return event;
@@ -50,7 +50,7 @@ export class Event<T extends object> {
   static _generateCreateEvent<U extends object>(
     ledger: Ledger,
     initData: EntityData<U>,
-    eventMetadata: GenerateEventData
+    eventMetadata: GenerateEventData,
   ): Event<U> {
     return new Event<U>(
       {
@@ -64,7 +64,7 @@ export class Event<T extends object> {
         ledgerVersion: Ledger._getVersion(ledger),
         type: EventType.CREATE,
         timestamp: ledger.generateTimestamp(),
-      }
+      },
     );
   }
 
@@ -72,7 +72,7 @@ export class Event<T extends object> {
   static _generateChangeEvent<U extends object>(
     ledger: Ledger,
     changes: EntityChangeData<U>,
-    eventMetadata: GenerateEventData
+    eventMetadata: GenerateEventData,
   ): Event<U> {
     return new Event<U>(
       {
@@ -82,7 +82,7 @@ export class Event<T extends object> {
           "id",
           "name",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
         ) as DeepPartial<EntityData<U>>,
       },
       {
@@ -90,7 +90,7 @@ export class Event<T extends object> {
         ledgerVersion: Ledger._getVersion(ledger),
         timestamp: ledger.generateTimestamp(),
         type: EventType.CHANGE,
-      }
+      },
     );
   }
 
@@ -98,7 +98,7 @@ export class Event<T extends object> {
   static _generateBreakpointEvent<U extends object>(
     ledger: Ledger,
     breakpoint: string | number,
-    eventMetadata: GenerateEventData
+    eventMetadata: GenerateEventData,
   ): Event<U> {
     return new Event<U>(
       {
@@ -111,13 +111,13 @@ export class Event<T extends object> {
         type: EventType.BREAKPOINT,
         breakpoint,
         ledgerVersion: Ledger._getVersion(ledger),
-      }
+      },
     );
   }
 
   /** @internal */
   static _generateChangeInstructions<T extends object>(
-    data: EntityChangeData<T> | EntityData<T>
+    data: EntityChangeData<T> | EntityData<T>,
   ) {
     const bodyPaths = getObjectPaths(data);
     const result: PropertyChangeInstruction[] = [];
@@ -138,14 +138,14 @@ export class Event<T extends object> {
    */
   static _cloneAndReplace<T extends object>(
     event: Event<T>,
-    data: EntityData<T> | DeepPartial<Omit<EntityData<T>, "id">>
+    data: EntityData<T> | DeepPartial<Omit<EntityData<T>, "id">>,
   ): Event<T> {
     return new Event<T>(
       {
         id: event.id,
         data,
       },
-      cloneDeep(event.eventMetadata)
+      cloneDeep(event.eventMetadata),
     );
   }
 

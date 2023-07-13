@@ -4,7 +4,7 @@ import type { SerializedChangeInstruction } from "../types";
 export class PropertyChangeInstruction {
   /** @internal */
   static _loadFrom(
-    serialized: SerializedChangeInstruction
+    serialized: SerializedChangeInstruction,
   ): PropertyChangeInstruction {
     const instruction = new PropertyChangeInstruction([], {});
 

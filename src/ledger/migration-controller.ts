@@ -17,7 +17,7 @@ export class MigrationController {
   private findMigrationsBetween(
     entity: string,
     versionA: number,
-    versionB: number
+    versionB: number,
   ): MigrationInterface<object, object>[] {
     const migrations = this.migrations.get(entity);
 
@@ -37,7 +37,7 @@ export class MigrationController {
 
   private applyMigrations<T extends object>(
     event: Event<T>,
-    migrations: MigrationInterface<object, object>[]
+    migrations: MigrationInterface<object, object>[],
   ): Event<T> {
     // Skip migrations if there are none
     if (migrations.length === 0) return event;
@@ -61,23 +61,23 @@ export class MigrationController {
       event.eventMetadata.type === EventType.CREATE
         ? (
             migration: MigrationInterface<object, object>,
-            data: object
+            data: object,
           ): object => {
             if (migration.migrateCreateEvent)
               return migration.migrateCreateEvent(
                 event.apply(data),
-                metadataCopy
+                metadataCopy,
               );
             return data;
           }
         : (
             migration: MigrationInterface<object, object>,
-            data: object
+            data: object,
           ): object => {
             if (migration.migrateChangeEvent)
               return migration.migrateChangeEvent(
                 event.apply(data),
-                metadataCopy
+                metadataCopy,
               );
             return data;
           };
@@ -112,7 +112,7 @@ export class MigrationController {
       throw new LedgerError(
         ErrorCode.DUPLICATE_MIGRATION,
         migration.entity,
-        migration.version
+        migration.version,
       );
     }
 
@@ -130,7 +130,7 @@ export class MigrationController {
     const migrations = this.findMigrationsBetween(
       event.eventMetadata.entity,
       event.eventMetadata.ledgerVersion,
-      this.ledger["version"]
+      this.ledger["version"],
     );
 
     return this.applyMigrations(event, migrations);
