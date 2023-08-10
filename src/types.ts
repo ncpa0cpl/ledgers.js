@@ -79,12 +79,15 @@ export enum EntityReferenceType {
   COPY = "COPY",
 }
 
-export type Reference<E extends BaseEntity | Copy> = {
-  ledgerName: string;
-  name: string;
-  type: EntityReferenceType;
-  id: E["id"];
-};
+class Reference<E extends BaseEntity | Copy> {
+  protected _e!: E;
+  ledgerName!: string;
+  name!: string;
+  type!: EntityReferenceType;
+  id!: E["id"];
+}
+
+export type { Reference };
 
 export interface MigrationInterface<B extends object, A extends object> {
   entity: string;

@@ -2,6 +2,7 @@ import type { CopiesList } from "./entity-containers/copy-list";
 import type { Entity } from "./entity-containers/entity";
 import type { EntityList } from "./entity-containers/entity-list";
 import type { Ledger } from "./ledger/ledger";
+import type { Reference } from "./types";
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   k: infer I,
@@ -31,7 +32,11 @@ export type Serial<T extends object> = {
 
 export type DeepPartial<T> = T extends object
   ? {
-      [K in keyof T]?: IsUnion<T[K]> extends true ? T[K] : DeepPartial<T[K]>;
+      [K in keyof T]?: IsUnion<T[K]> extends true
+        ? T[K]
+        : T[K] extends Reference<any>
+        ? T[K]
+        : DeepPartial<T[K]>;
     }
   : T;
 

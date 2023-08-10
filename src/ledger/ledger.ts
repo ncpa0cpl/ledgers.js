@@ -127,7 +127,7 @@ export abstract class Ledger {
       ledgerName: this.name,
       name,
       type,
-    };
+    } as Reference<T>;
   }
 
   resolveReference<T extends BaseEntity | Copy>(ref: Reference<T>): T {
@@ -186,12 +186,13 @@ export abstract class Ledger {
     this.transaction = undefined;
   }
 
-  tx(callback: () => void): void {
+  tx<R = void>(callback: () => R): R {
     this.startTransaction();
 
     try {
-      callback();
+      const r = callback();
       this.commitTransaction();
+      return r;
     } catch (e) {
       this.rollbackTransaction();
       throw e;
