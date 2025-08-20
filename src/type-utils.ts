@@ -95,3 +95,33 @@ export type SnapshotOf<L extends Ledger> = {
   listEntities: ListEntitiesSnapshot<L>;
   copies: CopiesSnapshot<L>;
 };
+
+export type NameOf<T> = T extends Entity<any>
+  ? EntityName<T>
+  : T extends EntityList<any>
+  ? EntityListName<T>
+  : T extends CopiesList<any>
+  ? CopiesListName<T>
+  : never;
+
+export type AsString<T> = T extends string ? T : never;
+
+export type LedgerProperties<L extends Ledger> = keyof {
+  [K in keyof L as NameOf<L[K]>]: string;
+};
+
+type Values<T> = T[keyof T];
+
+type Extract<T> = T extends Entity<infer U>
+  ? U
+  : T extends EntityList<infer U>
+  ? U
+  : T extends CopiesList<infer U>
+  ? U
+  : never;
+
+export type EntityOfName<L extends Ledger, N extends string> = Extract<
+  Values<{
+    [K in keyof L as N extends NameOf<L[K]> ? K : never]: L[K];
+  }>
+>;

@@ -1,12 +1,13 @@
 import { Entity } from "../../src/entity-containers/entity";
 import { BaseEntity } from "../../src/entity/base-entity";
 import { Ledger } from "../../src/ledger/ledger";
+import { NameOf } from "../../src/type-utils";
 import { EventType, MigrationInterface } from "../../src/types";
 
 describe("migrations", () => {
   it("should apply migrations", () => {
     class FooEntityV1 extends BaseEntity {
-      name = "FooEntity";
+      readonly name = "FooEntity";
 
       a: number;
 
@@ -17,7 +18,7 @@ describe("migrations", () => {
 
     class LedgerV1 extends Ledger {
       static version = 1;
-      name = "Ledger";
+      readonly name = "Ledger";
 
       foo = new Entity(this, FooEntityV1);
 
@@ -28,7 +29,7 @@ describe("migrations", () => {
     }
 
     class FooEntityV2 extends BaseEntity {
-      name = "FooEntity";
+      readonly name = "FooEntity";
 
       a: number;
       b: string;
@@ -36,44 +37,65 @@ describe("migrations", () => {
 
     class LedgerV2 extends Ledger {
       static version = 2;
-      name = "Ledger";
+      readonly name = "Ledger";
 
       foo = new Entity(this, FooEntityV2);
     }
 
     class FooEntityV3 extends BaseEntity {
-      name = "FooEntity";
+      readonly name = "FooEntity";
 
       a: string;
       b: string;
     }
 
-    class LedgerV3 extends Ledger {
-      static version = 3;
-      name = "Ledger";
+    class NewEntity extends BaseEntity {
+      readonly name = "NewEntity";
 
-      foo = new Entity(this, FooEntityV3);
+      allfoos: string[] = [];
     }
 
-    const migration1to2: MigrationInterface<FooEntityV1, FooEntityV2> = {
-      entity: "FooEntity",
+    class LedgerV3 extends Ledger {
+      static version = 3;
+      readonly name = "Ledger";
+
+      foo = new Entity(this, FooEntityV3);
+      newEntity = new Entity(this, NewEntity);
+    }
+
+    const migration1to2: MigrationInterface<LedgerV2> = {
       version: 2,
-      migrateCreateEvent(eventData, meta) {
-        return {
-          ...eventData,
-          b: eventData.a.toString(),
-        };
+      migrateEvent: {
+        FooEntity: {
+          create(data, meta) {
+            return {
+              ...data,
+              a: data.a!,
+              b: data.a!.toString(),
+            };
+          },
+        },
       },
     };
 
-    const migration2to3: MigrationInterface<FooEntityV2, FooEntityV3> = {
-      entity: "FooEntity",
+    const migration2to3: MigrationInterface<LedgerV3> = {
       version: 3,
-      migrateCreateEvent(eventData, meta) {
-        return {
-          ...eventData,
-          a: `Num(${eventData.b})`,
-        };
+      migrateEvent: {
+        FooEntity: {
+          create(data, meta) {
+            return {
+              ...data,
+              a: `Num(${data.b})`,
+              b: data.b!,
+            };
+          },
+        },
+      },
+      migrate(ledger, data) {
+        const foo = ledger.foo.get();
+        ledger.newEntity.create({
+          allfoos: [foo.a, foo.b],
+        });
       },
     };
 
@@ -168,6 +190,28 @@ describe("migrations", () => {
             ]),
           }),
         ],
+        NewEntity: [
+          expect.objectContaining({
+            metadata: expect.objectContaining({
+              ledgerVersion: 3,
+              type: EventType.CREATE,
+              entity: "NewEntity",
+            }),
+            instructions: expect.arrayContaining([
+              expect.objectContaining({
+                propertyPath: ["id"],
+              }),
+              expect.objectContaining({
+                propertyPath: ["allfoos", "0"],
+                value: "Num(12)",
+              }),
+              expect.objectContaining({
+                propertyPath: ["allfoos", "1"],
+                value: "12",
+              }),
+            ]),
+          }),
+        ],
       }),
     };
 
@@ -182,6 +226,13 @@ describe("migrations", () => {
           a: "Num(12)",
           b: "12",
           name: "FooEntity",
+          createdAt: expect.any(Number),
+          updatedAt: expect.any(Number),
+          id: expect.any(String),
+        },
+        NewEntity: {
+          allfoos: ["Num(12)", "12"],
+          name: "NewEntity",
           createdAt: expect.any(Number),
           updatedAt: expect.any(Number),
           id: expect.any(String),

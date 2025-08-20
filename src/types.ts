@@ -1,5 +1,12 @@
 import type { BaseEntity } from "./entity/base-entity";
-import type { DeepPartial, ReadonlyKeys, Serial } from "./type-utils";
+import type { Ledger } from "./ledger/ledger";
+import type {
+  DeepPartial,
+  EntityOfName,
+  NameOf,
+  ReadonlyKeys,
+  Serial,
+} from "./type-utils";
 
 export type EntityData<T extends object> = Omit<
   Serial<T>,
@@ -60,6 +67,7 @@ export type SerializedEntities = {
 export type SerializedLedger = SerializedEntities &
   SerializedBreakpoints & {
     name: string;
+    version: number;
   };
 
 export type SerializedEvent = {
@@ -89,13 +97,43 @@ class Reference<E extends BaseEntity | Copy> {
 
 export type { Reference };
 
-export interface MigrationInterface<B extends object, A extends object> {
-  entity: string;
+export type OldEvent<T> = {
+  // @ts-expect-error
+  name: T["name"];
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+  [index: string]: any;
+} & Partial<T>;
+
+export interface EventMigrator<T> {
+  create?(eventData: OldEvent<T>, meta: AdditionalEventData): T;
+  change?(eventData: OldEvent<T>, meta: AdditionalEventData): T;
+}
+
+export type MigrateEventMap<L extends Ledger> = {
+  [K in keyof L as [NameOf<L[K]>] extends [never]
+    ? never
+    : NameOf<L[K]>]?: EventMigrator<EntityOfName<L, NameOf<L[K]>>>;
+};
+
+export type MigrationInterface<L extends Ledger> = {
   version: number;
 
-  migrateCreateEvent?: (eventData: B, meta: AdditionalEventData) => A;
-  migrateChangeEvent?: (
-    eventData: Partial<B>,
-    meta: AdditionalEventData,
-  ) => Partial<A>;
+  /**
+   * `migrate()` function will be called on a ledger after a serialized
+   * ledger data was loaded into the Ledger class with a version that's lower
+   * than the class Ledger version.
+   */
+  migrate?(ledger: L, data: SerializedLedger): void;
+  /**
+   * Here migration function for specific Entitiies events can be defined.
+   * With a event migration you can change that entity history.
+   */
+  migrateEvent?: MigrateEventMap<L>;
+};
+
+export interface LedgerMigrationInterface {
+  entity: string;
+  version: number;
 }

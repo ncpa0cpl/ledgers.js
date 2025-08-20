@@ -21,7 +21,7 @@ export const ErrorMessage = createErrorMessageMap({
   [ErrorCode.DUPLICATE_IDENTIFIER]:
     "Duplicate identifier. Entity with the provided ID already exists!",
   [ErrorCode.DUPLICATE_MIGRATION]:
-    "Duplicate migration. A migration for the $1 entity and $2 version already exists.",
+    "Duplicate migration. A migration for the version '$1' already exists.",
   [ErrorCode.EMPTY_EVENTS_LIST]:
     "Entity you are trying to access has not yet been created.",
   [ErrorCode.ENTITY_ALREADY_CREATED]:

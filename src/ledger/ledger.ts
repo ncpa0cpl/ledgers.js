@@ -35,11 +35,15 @@ export abstract class Ledger {
     ledger.entities.loadFrom(data);
     ledger.breakpoints.loadFrom(data);
 
+    const migrationController = Ledger._getMigrationController(ledger);
+
+    migrationController.migrateLedger(ledger, data);
+
     return ledger as InstanceType<T>;
   }
 
   static registerMigrations(
-    ...migrations: MigrationInterface<any, any>[]
+    ...migrations: MigrationInterface<Ledger, any, any>[]
   ): void {
     this._ensureMigrationControllerExists();
     for (const migration of migrations) {
@@ -218,6 +222,7 @@ export abstract class Ledger {
 
     return {
       name: this.name,
+      version: Ledger.version,
       ...this.entities.serialize(),
       ...this.breakpoints.serialize(),
     };
@@ -225,7 +230,7 @@ export abstract class Ledger {
 
   getSnapshot<T extends Ledger>(
     this: T,
-    breakpoint?: string | number,
+    breakpoint?: string | number
   ): SnapshotOf<T> {
     return this.entities.getSnapshot(breakpoint) as any;
   }
