@@ -1,5 +1,5 @@
 {
-  "name": "ledgers.js",
+  "name": "@ncpa0cpl/ledgers.js",
   "version": "1.0.0",
   "main": "./dist/legacy/index.js",
   "types": "./dist/types/index.d.ts",
