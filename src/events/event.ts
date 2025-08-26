@@ -24,6 +24,7 @@ export function getObjectPaths(obj: object) {
       if (["string", "number", "bigint", "boolean"].includes(typeof value)) {
         paths.add(vPath);
       } else if (typeof value === "object" && value !== null) {
+        paths.add(vPath);
         traverse(value, vPath);
       }
     }
